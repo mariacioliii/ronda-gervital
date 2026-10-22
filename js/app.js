@@ -3,8 +3,8 @@
 
 const UI0 = () => ({
   tab: "hoy", sub: null, sheet: null, ficha: null, form: null, toast: null,
-  semDia: null, verSinreg: false,
-  pf: { q: "", act: true },
+  ronda: null,
+  pf: { q: "", act: true, dia: null },
   hf: { rango: "7", pid: "", estado: "" },
   login: { uid: null, pin: "", err: "" },
   setup: { step: 1 },
@@ -66,7 +66,7 @@ function render() {
     else if (ui.sub === "equipo") content = vEquipo();
     else if (ui.sub === "ajustes") content = vAjustes();
     else if (ui.sub === "importar") content = vImportar();
-    else content = { hoy: vHoy, semana: vSemana, personas: vPersonas, historial: vHistorial, mas: vMas }[ui.tab]();
+    else content = ({ hoy: vHoy, personas: vPersonas, historial: vHistorial, mas: vMas }[ui.tab] || vHoy)();
     html = vShell(content) + (ui.ficha ? vFicha() : "");
   }
   html += vSheet() + vAlarm() + vToast();
@@ -96,7 +96,7 @@ function renderSoft() {
   render();
 }
 
-const goTab = (t) => { ui.tab = t; ui.sub = null; ui.ficha = null; ui.sheet = null; toTop(); };
+const goTab = (t) => { ui.tab = t; if (t === "hoy") ui.ronda = null; ui.sub = null; ui.ficha = null; ui.sheet = null; toTop(); };
 const openSheet = (s, extra = {}) => { ui.sheet = { s, ...extra }; };
 const closeSheet = () => { ui.sheet = null; ui.form = ui.sub === "persona" ? ui.form : null; ui.medErr = ui.uErr = ui.pinErr = null; if (ui.sub === "persona" && ui.form) delete ui.form.med; };
 
@@ -188,9 +188,9 @@ const A = {
   closeSheet() { if (S.user?.cambiarPin && ui.sheet?.s === "pin") return; closeSheet(); },
   scrim(d, el, ev) { if (ev.target === el) A.closeSheet(); },
   fSet(d) { ui.form[d.k] = d.v; },
-  verSinreg() { ui.verSinreg = !ui.verSinreg; },
-  semDia(d) { ui.semDia = d.iso; },
-  pfAct(d) { ui.pf.act = d.v === "1"; },
+  ronda(d) { ui.ronda = d.h; toTop(); },
+  pfAct(d) { ui.pf.act = d.v === "1"; toTop(); },
+  pfDia(d) { ui.pf.dia = d.n ? +d.n : null; },
   hf(d) { ui.hf[d.k] = d.v; },
   verHist(d) { ui.hf = { rango: "30", pid: d.pid, estado: "" }; goTab("historial"); },
 
@@ -389,7 +389,6 @@ const A = {
     const ok = () => toast("Copiado. Pegalo en un archivo o en una planilla.");
     try { navigator.clipboard.writeText(t).then(ok, () => { const ta = $("#expText"); ta && ta.select(); }); } catch (e) { const ta = $("#expText"); ta && ta.select(); }
   },
-  tipOk() { kvSet("tipHoy", true); },
   instalar() { if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.finally(() => { deferredInstall = null; ui.sheet = null; render(); }); } },
 
   /* Importar planilla */

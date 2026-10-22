@@ -110,7 +110,7 @@ svg.i.l { width: 28px; height: 28px; }
 main.page { flex: 1; width: 100%; max-width: 760px; margin: 0 auto; padding: 8px 16px calc(var(--tab-h) + 32px + var(--safe-b)); }
 .tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: calc(var(--tab-h) + var(--safe-b)); padding-bottom: var(--safe-b);
-  display: grid; grid-template-columns: repeat(5, 1fr); background: var(--surface); border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border-top: 1px solid var(--line);
 }
 .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--ink-3); position: relative; }
 .tab .ico { width: 56px; height: 30px; border-radius: 999px; display: grid; place-items: center; transition: background .2s; }
@@ -220,45 +220,45 @@ h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -.01em; }
 .tag.mute { background: var(--mute-bg); color: var(--ink-2); }
 .tag.sol { background: var(--sol-suave); color: var(--warn); }
 .tag.bad { background: var(--bad-bg); color: var(--bad); }
+.tag.ok { background: var(--ok-bg); color: var(--ok); }
 
-/* ---------- HOY: cabecera de ronda ---------- */
+/* ---------- HOY ---------- */
+.hoy { max-width: 640px; margin: 0 auto; }
+.hola { display: flex; align-items: center; gap: 12px; margin: 6px 0 18px; }
+.hola h1 { font-size: 28px; font-weight: 600; margin: 0; letter-spacing: -.015em; }
+.hola p { margin: 2px 0 0; color: var(--ink-2); font-size: 15.5px; }
+.respchip { display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 5px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); text-align: left; font-weight: 600; font-size: 15px; line-height: 1.15; max-width: 48%; }
+.respchip small { display: block; font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.respchip span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Pastillas de rondas: elegir la hora */
+.rpills { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px 14px; padding: 2px 16px; scrollbar-width: none; }
+.rpills::-webkit-scrollbar { display: none; }
+.rpill { flex: none; display: inline-flex; align-items: center; gap: 7px; min-height: 48px; padding: 0 20px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--line); font-size: 18px; font-weight: 600; color: var(--ink); }
+.rpill i { font-style: normal; font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 999px; background: var(--sol); color: var(--violeta-hondo); }
+.rpill svg { width: 17px; height: 17px; stroke-width: 2.6; }
+.rpill.ok svg { color: var(--ok); }
+.rpill.falta svg { color: var(--warn); }
+.rpill[aria-selected="true"] { background: var(--violeta-hondo); border-color: var(--violeta-hondo); color: #fff; }
+.rpill[aria-selected="true"].ok svg { color: #8FE0B5; }
+.rpill[aria-selected="true"].falta svg { color: var(--sol); }
+
 .hero {
-  position: relative; overflow: hidden; border-radius: 28px; padding: 22px 20px 20px; color: #fff;
-  background: var(--violeta); margin-top: 4px;
-  background-image: radial-gradient(120% 80% at 100% 0%, rgba(255, 255, 255, .12), transparent 60%);
+  position: relative; overflow: hidden; border-radius: 28px; padding: 20px 22px 22px; color: #fff;
+  background: var(--violeta); background-image: radial-gradient(120% 90% at 100% 0%, rgba(255, 255, 255, .16), transparent 60%);
 }
-.hero::after { /* arco de "ronda" */
-  content: ""; position: absolute; right: -90px; top: -90px; width: 240px; height: 240px; border-radius: 50%;
-  border: 26px solid rgba(255, 255, 255, .07); pointer-events: none;
-}
-.hero .fecha { font-size: 15px; font-weight: 600; color: #F0DDF2; letter-spacing: .02em; }
-.hero h1 { font-size: 34px; font-weight: 600; margin: 6px 0 2px; letter-spacing: -.015em; }
-.hero h1 .num { color: var(--sol); }
-.hero .sub { color: #F5E9F6; font-size: 16.5px; }
-.hero .prog { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
-.hero .bar { flex: 1; height: 12px; border-radius: 999px; background: rgba(255, 255, 255, .18); overflow: hidden; }
+.hero::after { content: ""; position: absolute; right: -80px; top: -80px; width: 220px; height: 220px; border-radius: 50%; border: 24px solid rgba(255, 255, 255, .07); pointer-events: none; }
+.hero .k { font-size: 15px; font-weight: 500; color: #F0DDF2; }
+.hero h1 { font-size: 52px; line-height: 1; font-weight: 600; margin: 4px 0 6px; letter-spacing: -.02em; }
+.hero .cuenta { text-align: right; font-size: 18px; font-weight: 600; color: #F0DDF2; line-height: 1; }
+.hero .cuenta b { font-size: 34px; color: #fff; }
+.hero .cuenta span { display: block; font-size: 13px; font-weight: 500; margin-top: 4px; }
+.hero .sub { color: #F5E9F6; font-size: 16px; }
+.hero .bar { margin-top: 16px; height: 10px; border-radius: 999px; background: rgba(255, 255, 255, .2); overflow: hidden; }
 .hero .bar i { display: block; height: 100%; border-radius: inherit; background: var(--sol); transition: width .5s cubic-bezier(.2, .8, .2, 1); }
-.hero .cuenta { font-size: 16px; font-weight: 600; white-space: nowrap; }
-.hero .cuenta b { font-size: 24px; }
-
-/* Línea del día */
-.dia { margin-top: 20px; position: relative; display: flex; justify-content: space-between; gap: 4px; }
-.dia::before { content: ""; position: absolute; left: 16px; right: 16px; top: 15px; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .22); }
-.dia .fill { position: absolute; left: 16px; top: 15px; height: 3px; border-radius: 3px; background: #fff; }
-.nodo { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 44px; color: #F0DDF2; font-size: 14px; font-weight: 600; }
-.nodo .c { width: 33px; height: 33px; border-radius: 50%; display: grid; place-items: center; background: var(--violeta); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .45); }
-.nodo.ok .c { background: #fff; color: var(--violeta); box-shadow: none; }
-.nodo.falta .c { background: #fff; color: var(--bad); box-shadow: none; }
-.nodo.cur .c { background: var(--sol); color: var(--violeta-hondo); box-shadow: 0 0 0 6px rgba(243, 193, 27, .28); }
-.nodo.cur { color: #fff; }
-.nodo .c svg { width: 17px; height: 17px; stroke-width: 3; }
-.nodo .n { font-size: 12.5px; }
-
-.resp { margin-top: 16px; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; border-radius: 18px; background: rgba(255, 255, 255, .1); }
-.resp .av { box-shadow: 0 0 0 2px rgba(255, 255, 255, .7); }
-.resp .t { flex: 1; min-width: 0; font-size: 15px; color: #F0DDF2; line-height: 1.3; }
-.resp .t b { color: #fff; font-size: 16.5px; display: block; }
-.resp .btn { background: #fff; color: #5E2C66; }
+.hoy .hero + .aviso { margin-top: 12px; }
+.aviso.tap { width: 100%; text-align: left; align-items: center; font: inherit; }
+.aviso.tap > svg:last-child { color: var(--ink-2); }
 
 /* Aviso */
 .aviso { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); }
@@ -293,13 +293,13 @@ h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -.01em; }
 .med .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .med .reg { text-align: right; font-size: 14px; color: var(--ink-2); }
 .med .reg .st { margin-bottom: 3px; }
-.dar { min-height: 50px; padding: 0 18px 0 14px; }
-.otra { width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 1.5px var(--line-2); color: var(--ink-2); }
-.otra:hover { background: var(--lila-2); color: var(--ink); }
-.pc .ft { display: flex; gap: 8px; padding: 10px 14px 14px; border-top: 1px dashed var(--line); }
-html.n520 .med { flex-wrap: wrap; }
-html.n520 .med .acts { width: 100%; justify-content: stretch; }
-html.n520 .med .acts .dar { flex: 1; }
+.med.open { display: block; }
+.med.open .acts { margin-top: 10px; flex-wrap: nowrap; justify-content: stretch; }
+.dar { min-height: 52px; padding: 0 18px 0 14px; font-size: 17px; }
+.otra { min-height: 52px; padding: 0 14px; font-size: 15px; white-space: nowrap; }
+.novino { flex: none; }
+.pc .meta svg { width: 14px; height: 14px; vertical-align: -2px; }
+.pc .ft .btn { min-height: 50px; }
 
 
 /* Lista compacta de ya registradas */
@@ -606,3 +606,14 @@ html.phone #vista-cap li::before { content: ""; width: 10px; height: 10px; borde
 .baja b { font-size: 17px; }
 .baja p { margin: 4px 0 0; color: var(--ink-2); font-size: 15px; }
 .baja .btn { width: 100%; margin-top: 14px; }
+
+/* Pastillas de filtro (días, estados) */
+.dpills { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px 14px; padding: 2px 16px; scrollbar-width: none; }
+.dpills::-webkit-scrollbar { display: none; }
+.dpills button { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 16px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--line); font-weight: 600; font-size: 15px; color: var(--ink-2); }
+.dpills button i { font-style: normal; font-size: 11.5px; padding: 1px 6px; border-radius: 999px; background: var(--sol); color: var(--violeta-hondo); }
+.dpills button[aria-pressed="true"] { background: var(--violeta-hondo); border-color: var(--violeta-hondo); color: #fff; }
+.me { padding: 4px 10px 4px 4px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); }
+.me[aria-current="page"] { background: var(--lila); border-color: var(--line-2); }
+.done-msg .btn { margin-left: auto; flex: none; }
+.hoy .hero + .done-msg { margin-top: 16px; }
