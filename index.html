@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es-UY">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ronda · Gervital</title>
+<meta name="description" content="Registro y alarmas de medicación de Gervital, Centro Diurno Gerontológico.">
+<meta name="theme-color" content="#86428F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ronda">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-32.png" sizes="32x32">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="vista-cap" hidden>
+  <div class="cap-in">
+    <svg class="mk" viewBox="0 0 48 48" aria-hidden="true"><circle class="a" cx="14.5" cy="9" r="6.2"/><circle class="b" cx="33.5" cy="9" r="6.2"/><path class="a" d="M24 22.5C18.5 14.8 5.5 15.2 5.5 25.4c0 7.4 8 13.3 18.5 20.1z"/><path class="b" d="M24 22.5c5.5-7.7 18.5-7.3 18.5 2.9 0 7.4-8 13.3-18.5 20.1z"/></svg>
+    <h1>ronda</h1>
+    <p>La app de medicación de Gervital. Así se ve en el celular del equipo.</p>
+    <ul><li>Una alarma por ronda</li><li>Registrar cada toma en un toque</li><li>Quién la dio y a qué hora, siempre guardado</li></ul>
+  </div>
+</div>
+<div id="app" aria-live="off"></div>
+<button id="vista" type="button" hidden></button>
+<noscript>Ronda necesita JavaScript para funcionar.</noscript>
+<script>window.LOGO_BLANCO = "img/logo-blanco-480.png";</script>
+<script src="js/util.js"></script>
+<script src="js/db.js"></script>
+<script src="js/store.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/alarm.js"></script>
+<script src="js/views.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

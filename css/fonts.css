@@ -1,0 +1,3 @@
+/* Tipografías incluidas en la app (licencia SIL Open Font) para que funcione sin internet */
+@font-face { font-family: "Lexend"; font-style: normal; font-weight: 300 700; font-display: swap; src: url(../fonts/lexend.woff2) format("woff2"); }
+@font-face { font-family: "Comfortaa"; font-style: normal; font-weight: 700; font-display: swap; src: url(../fonts/comfortaa-700.woff2) format("woff2"); }
