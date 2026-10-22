@@ -184,6 +184,8 @@ const A = {
       const u = d.uid ? staffById(d.uid) : null;
       ui.form = { u: u ? { ...u, pin: "", resp: S.cfg.responsableHabitual === u.id } : { _nuevo: true, nombre: "", rol: "Cuidado", pin: "", admin: false, resp: false, activo: true } };
     } else if (["pin", "borrar"].includes(s)) ui.form = {};
+    else if (s === "unir") { ui.form = { unir: d.v || "" }; ui.nubeErr = null; }
+    else if (["nube", "avisos"].includes(s)) { ui.nubeErr = null; if (ui.sub !== "persona") ui.form = null; }
     else if (s !== "restore") { if (ui.sub !== "persona") ui.form = null; }
     openSheet(s, { id: d.id, pid: d.pid });
   },
@@ -345,6 +347,7 @@ const A = {
   },
   async borrarTodo() {
     await DB.clearAll();
+    Nube.salir();
     location.reload();
   },
 
@@ -371,6 +374,7 @@ const A = {
     const obj = ui.form.restore;
     await DB.clearAll();
     for (const s of DB.STORES) if (obj.data[s]?.length) await DB.putMany(s, obj.data[s]);
+    if (Nube.activa) { await Nube.subirTodo(); await Nube.sincronizar(); }
     location.reload();
   },
   exportCSV() {
@@ -391,7 +395,38 @@ const A = {
     const ok = () => toast("Copiado. Pegalo en un archivo o en una planilla.");
     try { navigator.clipboard.writeText(t).then(ok, () => { const ta = $("#expText"); ta && ta.select(); }); } catch (e) { const ta = $("#expText"); ta && ta.select(); }
   },
-  instalar() { if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.finally(() => { deferredInstall = null; ui.sheet = null; render(); }); } },
+  /* Varios celulares */
+  async nubeActivar() {
+    ui.nubeErr = null; ui.nubeOcupada = true; render();
+    try { await Nube.crear(); ui.nubeOcupada = false; toast("Listo: ya podés sumar otros celulares con el link"); }
+    catch (e) { ui.nubeOcupada = false; ui.nubeErr = navigator.onLine ? "No se pudo activar. Probá de nuevo en un rato." : "Necesitás internet para activarlo."; }
+  },
+  nubeCopiar() {
+    const t = Nube.link();
+    try { navigator.clipboard.writeText(t).then(() => toast("Link copiado"), () => { const i = $("#nubeLink"); i && i.select(); }); } catch (e) { const i = $("#nubeLink"); i && i.select(); }
+  },
+  async nubeCompartir() {
+    if (navigator.share) { try { await navigator.share({ title: "Ronda · Gervital", text: "Abrí este link para usar Ronda con el equipo:", url: Nube.link() }); } catch (e) {} }
+    else A.nubeCopiar();
+  },
+  nubeSalir() { Nube.salir(); ui.sheet = null; toast("Este celular dejó de compartir datos. Lo que tiene queda guardado acá."); },
+  async unirOk() {
+    const f = ui.form || {}; ui.nubeErr = null; ui.nubeOcupada = true; render();
+    try { await Nube.unirse(f.unir, true); ui.nubeOcupada = false; ui.sheet = null; ui.form = null; toast(S.staff.length ? "Listo. Entrá con tu PIN." : "Te uniste. Todavía no hay datos cargados."); }
+    catch (e) { ui.nubeOcupada = false; ui.nubeErr = e.message === "red" ? "Necesitás internet para unirte." : "Ese link no funciona. Pedí que te lo manden de nuevo."; }
+  },
+
+  /* Alarma con la app cerrada */
+  async avisosActivar() {
+    ui.nubeErr = null; ui.nubeOcupada = true; render();
+    try { await Nube.activarAvisos(); ui.nubeOcupada = false; toast("Listo: la alarma va a sonar aunque la app esté cerrada"); }
+    catch (e) { ui.nubeOcupada = false; ui.nubeErr = e.message === "bloqueado" ? "Los avisos quedaron bloqueados. Activalos en los ajustes del celular." : e.message === "cancelado" ? "No se aceptó el permiso. Tocá Activar y elegí Permitir." : "No se pudo activar. Revisá la conexión y probá de nuevo."; }
+  },
+  avisosNo() { lsSet("ronda-avisos-no", "1"); ui.sheet = null; },
+  async avisosDesactivar() { await Nube.desactivarAvisos(); ui.sheet = null; toast("Alarma con la app cerrada desactivada en este celular"); },
+  avisosProbar() { Nube.probarAvisos(12).catch(() => {}); ui.pruebaEnviada = true; setTimeout(() => { ui.pruebaEnviada = false; renderSoft(); }, 30000); },
+
+    instalar() { if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.finally(() => { deferredInstall = null; ui.sheet = null; render(); }); } },
 
   /* Importar planilla */
   impModelo() {
@@ -467,7 +502,7 @@ document.addEventListener("click", async (ev) => {
 document.addEventListener("input", (ev) => {
   lastActivity = Date.now();
   const el = ev.target, d = el.dataset;
-  if (d.f != null && ui.form) { ui.form[d.f] = el.value; if (["horaReal", "conf"].includes(d.f) || (el.tagName === "SELECT")) render(); }
+  if (d.f != null && ui.form) { ui.form[d.f] = el.value; if (["horaReal", "conf", "unir"].includes(d.f) || (el.tagName === "SELECT")) render(); }
   else if (d.fm != null && ui.form?.med) ui.form.med[d.fm] = el.value;
   else if (d.fu != null && ui.form?.u) ui.form.u[d.fu] = el.value;
   else if (d.pf != null) { ui.pf[d.pf] = el.value; render(); }
@@ -493,6 +528,7 @@ window.addEventListener("scroll", () => { const t = $(".topbar"); if (t) t.class
 document.addEventListener("click", (ev) => { if (ev.target.closest("#vista")) Vista.toggle(); });
 window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredInstall = e; });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") tick(true); });
+window.addEventListener("online", () => Nube.sincronizar());
 
 /* ---------- Reloj ---------- */
 function tick(force) {
@@ -504,6 +540,7 @@ function tick(force) {
   const m = nowMin();
   $$(".js-hora").forEach((e) => (e.textContent = hm(m)));
   if (S.staff.length) Alarm.check();
+  if (Nube.activa && (force || Date.now() - (Nube.ultima || 0) > 20000)) Nube.sincronizar();
   if (m !== lastMin || force) { lastMin = m; if (S.user && !ui.sheet) renderSoft(); }
 }
 
@@ -516,7 +553,15 @@ async function start() {
   await loadAll();
   listo = true;
   lastMin = nowMin();
+  const inv = leerClave(location.hash);
+  if (inv && Nube.disponible) {
+    history.replaceState(null, "", location.pathname + location.search);
+    if (inv === Nube.clave) {}
+    else if (!S.staff.length) { try { await Nube.unirse(inv, false); toast("Te uniste al equipo. Entrá con tu PIN."); } catch (e) { A.sheet({ s: "unir", v: inv }); } }
+    else A.sheet({ s: "unir", v: inv });
+  }
   render();
+  if (Nube.activa) Nube.sincronizar();
   setInterval(tick, 10000);
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost") && !window.RONDA_SINGLE) {
     navigator.serviceWorker.register("sw.js").catch(() => {});

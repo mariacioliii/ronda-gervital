@@ -619,3 +619,6 @@ html.phone #vista-cap li::before { content: ""; width: 10px; height: 10px; borde
 .me[aria-current="page"] { background: var(--lila); border-color: var(--line-2); }
 .done-msg .btn { margin-left: auto; flex: none; }
 .hoy .hero + .done-msg { margin-top: 16px; }
+.li .ic.ok { background: var(--ok-bg); color: var(--ok); }
+.linkbox input { font-size: 14px; color: var(--ink-2); }
+.hoy .invita { margin: -6px 0 16px; }

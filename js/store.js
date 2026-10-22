@@ -31,9 +31,10 @@ const ROLES = ["Enfermería", "Cuidado", "Psicomotricidad", "Coordinación", "Di
 /* ---------- Persistencia ---------- */
 let saveErr = false;
 function persist(store, obj) {
+  Nube.encolar(store, obj);
   DB.put(store, obj).catch(() => { if (!saveErr) { saveErr = true; toast("No se pudo guardar en este dispositivo. Revisá el espacio disponible.", null, "bad"); } });
 }
-function unpersist(store, id) { DB.del(store, id).catch(() => {}); }
+function unpersist(store, id) { Nube.encolar(store, id, true); DB.del(store, id).catch(() => {}); }
 
 async function loadAll() {
   const [kv, staff, personas, meds, registros, ausencias] = await Promise.all(DB.STORES.map((s) => DB.all(s)));

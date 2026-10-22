@@ -28,7 +28,8 @@ function vSetup() {
         <div class="row top"><span class="ic-c">${ic("check")}</span><div><b>Registrar en un toque</b><div class="muted small">Cada persona del equipo entra con su PIN y queda registrado quién dio cada toma.</div></div></div>
         <div class="row top"><span class="ic-c">${ic("shield")}</span><div><b>Los datos quedan en este dispositivo</b><div class="muted small">Funciona sin internet. Podés hacer copias de seguridad cuando quieras.</div></div></div>
       </div>
-      <button class="btn block" style="margin-top:24px" data-act="setupNext">Empezar</button>`;
+      <button class="btn block" style="margin-top:24px" data-act="setupNext">Empezar</button>
+      ${Nube.disponible ? `<button class="btn line block" style="margin-top:10px" data-act="sheet" data-s="unir">${ic("phone", "s")} Ya usamos Ronda en otro celular</button>` : ""}`;
   } else if (st.step === 2) {
     body = `
       <div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
@@ -186,7 +187,13 @@ function vHoy() {
 
   const aviso = atrasadas.length ? `<button class="aviso warn tap" data-act="ronda" data-h="${atrasadas[0].hora}">${ic("alert")}<div class="grow"><b>Quedó algo sin registrar a las ${atrasadas.map((r) => r.hora).join(" y ")}</b><p>Tocá acá para completarlo.</p></div>${ic("chevR", "s")}</button>` : "";
 
-  return `<div class="hoy">${saludo}${pills}${vHero(foco, cur, min)}${aviso}${lista}${vNoVinieron(iso)}</div>`;
+  return `<div class="hoy">${saludo}${vInvitaAvisos()}${pills}${vHero(foco, cur, min)}${aviso}${lista}${vNoVinieron(iso)}</div>`;
+}
+
+function vInvitaAvisos() {
+  if (!Nube.pushPosible || lsGet("ronda-avisos-no") || (lsGet("ronda-avisos") && Notification.permission === "granted")) return "";
+  if (esIOS() && !instalada()) return "";
+  return `<button class="aviso info tap invita" data-act="sheet" data-s="avisos">${ic("bell")}<div class="grow"><b>Que la alarma suene con la app cerrada</b><p>Activalo una vez en este celular.</p></div>${ic("chevR", "s")}</button>`;
 }
 
 function vRespChip() {
@@ -398,6 +405,10 @@ function vMas() {
       ${li("sub", "equipo", "Equipo", `${plural(S.staff.filter((x) => x.activo !== false).length, "persona activa", "personas activas")} · quién puede ingresar`, 'data-sub="equipo"')}
       ${li("sub", "ajustes", "Alarmas y tiempos", `Atrasada a los ${S.cfg.margen} min · sin registrar a las ${durTxt(S.cfg.limite)}`, 'data-sub="ajustes"')}
     </div></div>` : `<div class="grupo"><span class="eyebrow">Alarmas</span><div class="list">${li("sub", "sound", "Sonido y avisos", S.cfg.sonido ? "Sonido activado" : "Sonido apagado", 'data-sub="ajustes"')}</div></div>`}
+    ${Nube.disponible ? `<div class="grupo"><span class="eyebrow">Varios celulares</span><div class="list">
+      ${li("sheet", "phone", "Usar en varios celulares", Nube.activa ? (Nube.estado === "sinred" ? "Conectado · sin internet ahora, se guarda y sube después" : Nube.estado === "error" ? "Conectado · hubo un problema al sincronizar" : `Conectado${Nube.ultima ? ` · al día a las ${hm(new Date(Nube.ultima).getHours() * 60 + new Date(Nube.ultima).getMinutes())}` : ""}`) : "Todos ven las mismas personas y registros", 'data-s="nube"', Nube.activa ? "ok" : "")}
+      ${li("sheet", "bell", "Alarma con la app cerrada", lsGet("ronda-avisos") && typeof Notification !== "undefined" && Notification.permission === "granted" ? "Activada en este celular" : "Para que suene aunque no tengas la app abierta", 'data-s="avisos"')}
+    </div></div>` : ""}
     <div class="grupo"><span class="eyebrow">Datos</span><div class="list">
       ${li("sub", "sheet", "Importar planilla", "Cargar personas y medicación desde un CSV", 'data-sub="importar"')}
       ${li("backup", "download", "Hacer copia de seguridad", kvGet("ultimaCopia") ? `Última: ${tsTexto(kvGet("ultimaCopia"))}` : "Todavía no hiciste ninguna")}
@@ -408,7 +419,7 @@ function vMas() {
       ${li("sheet", "bell", "Probar la alarma", "Escuchá cómo suena cada aviso", 'data-s="probar"')}
       ${li("sheet", "key", "Cambiar mi PIN", "", 'data-s="pin"')}
     </div></div>
-    <p class="faint xs" style="text-align:center;margin-top:24px">Ronda 1.2 · Gervital Centro Diurno Gerontológico<br>${DB.enMemoria ? "Atención: este navegador no permite guardar datos. Se pierden al cerrar." : "Los datos se guardan en este dispositivo."}</p>`;
+    <p class="faint xs" style="text-align:center;margin-top:24px">Ronda 1.3 · Gervital Centro Diurno Gerontológico<br>${DB.enMemoria ? "Atención: este navegador no permite guardar datos. Se pierden al cerrar." : "Los datos se guardan en este dispositivo."}</p>`;
 }
 
 /* Equipo */
@@ -437,7 +448,7 @@ function vAjustes() {
       <hr class="divider" style="margin:0">
       <div class="switch"><span class="grow"><b>Avisos del sistema</b><span>${notif === "granted" ? "Activados: la alarma aparece aunque estés en otra ventana." : notif === "denied" ? "Bloqueados en este navegador. Se activan desde la configuración del navegador." : notif === "na" ? "Este navegador no los permite." : "Para que la alarma aparezca aunque estés en otra ventana."}</span></span>${notif === "default" ? `<button class="btn sec sm" data-act="pedirNotif">Activar</button>` : ""}</div>
     </div>
-    <div class="aviso info" style="margin-top:10px">${ic("info")}<div>Las alarmas suenan mientras la app esté abierta. Lo ideal es dejarla abierta en la PC o tablet del centro.</div></div>
+    <div class="aviso info" style="margin-top:10px">${ic("info")}<div>Con la app abierta suena la campana. Para que avise con la app cerrada, activá <b>Alarma con la app cerrada</b> en Mi cuenta y ajustes.</div></div>
     <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn line sm" data-act="probarAlarma" data-k="ronda">${ic("bell", "s")} Probar ronda</button><button class="btn line sm" data-act="probarAlarma" data-k="atraso">${ic("alert", "s")} Probar atraso</button></div>
     </div>
     ${esAdmin() ? `
@@ -609,6 +620,60 @@ function vSheet() {
       const n = primerNombre(f.nombre || "esta persona");
       title = `¿Dar de baja a ${n}?`; sub = "Deja de aparecer en las rondas y no suenan alarmas por su medicación. Su historial queda guardado y la podés volver a dar de alta cuando quieras.";
       acts = `<button class="btn line" data-act="closeSheet">Cancelar</button><button class="btn danger" data-act="darBaja">${ic("ausente", "s")} Dar de baja</button>`;
+      break;
+    }
+    case "nube": {
+      title = "Usar en varios celulares";
+      if (!Nube.activa) {
+        sub = "Así todo el equipo ve las mismas personas, medicación y registros, y la alarma puede sonar con la app cerrada.";
+        body = `<div class="stack">
+          <div class="row top"><span class="ic-c">${ic("phone")}</span><div><b>Se sube lo que hay en este celular</b><div class="muted small">Después compartís un link y cada celular del equipo se une con él.</div></div></div>
+          <div class="row top"><span class="ic-c">${ic("shield")}</span><div><b>Solo entra quien tiene el link</b><div class="muted small">Pasalo solo al equipo del centro. Cada persona igual entra con su PIN.</div></div></div>
+        </div>${ui.nubeErr ? `<p class="err">${esc(ui.nubeErr)}</p>` : ""}`;
+        acts = esAdmin() ? `<button class="btn line" data-act="closeSheet">Ahora no</button><button class="btn" data-act="nubeActivar" ${ui.nubeOcupada ? "disabled" : ""}>${ui.nubeOcupada ? "Activando…" : "Activar"}</button>` : `<p class="muted small">Lo activa quien administra la app.</p>`;
+      } else {
+        sub = "Para sumar otro celular, mandale este link y que lo abra. Después entra con su PIN.";
+        body = `<div class="linkbox"><input type="text" readonly value="${esc(Nube.link())}" id="nubeLink" aria-label="Link para sumar celulares"></div>
+          <div class="row" style="gap:8px;margin-top:10px"><button class="btn sec grow" data-act="nubeCompartir">${ic("phone", "s")} Compartir link</button><button class="btn line grow" data-act="nubeCopiar">Copiar</button></div>
+          <p class="faint small" style="margin-top:12px">En iPhone: si ya tiene la app instalada, que la abra, toque <b>Ya usamos Ronda en otro celular</b> y pegue el link.</p>`;
+        acts = `<button class="btn line" data-act="nubeSalir">Desconectar este celular</button><button class="btn" data-act="closeSheet">Listo</button>`;
+      }
+      break;
+    }
+    case "unir": {
+      title = "Unirme al equipo"; sub = "Pegá el link que te pasaron desde otro celular que ya usa Ronda.";
+      body = `<label class="field"><span>Link o código</span><input type="text" data-f="unir" value="${esc(f.unir || "")}" placeholder="https://…#centro=…" autocapitalize="off" autocomplete="off"></label>
+        ${S.staff.length ? `<div class="aviso warn">${ic("alert")}<div>Este celular ya tiene datos. Se reemplazan por los del equipo.</div></div>` : ""}
+        ${ui.nubeErr ? `<p class="err">${esc(ui.nubeErr)}</p>` : ""}`;
+      acts = `<button class="btn line" data-act="closeSheet">Cancelar</button><button class="btn" data-act="unirOk" ${ui.nubeOcupada || !leerClave(f.unir) ? "disabled" : ""}>${ui.nubeOcupada ? "Uniendo…" : "Unirme"}</button>`;
+      break;
+    }
+    case "avisos": {
+      title = "Alarma con la app cerrada";
+      const perm = typeof Notification !== "undefined" ? Notification.permission : "na";
+      const on = lsGet("ronda-avisos") && perm === "granted";
+      if (!Nube.pushPosible || (esIOS() && !instalada())) {
+        sub = "Primero instalá la app en este celular.";
+        body = `<div class="aviso">${ic("install")}<div><b>${esIOS() ? "En iPhone" : "En este celular"}</b><p>${esIOS() ? "Abrí el link en Safari, tocá Compartir y elegí “Agregar a inicio”. Después abrí Ronda desde ese ícono y volvé acá." : "Este navegador no permite avisos con la app cerrada. Probá con Chrome."}</p></div></div>`;
+      } else if (!Nube.activa) {
+        sub = "La alarma con la app cerrada la manda el servidor del equipo.";
+        body = `<div class="aviso info">${ic("info")}<div>Primero hay que activar <b>Usar en varios celulares</b>.</div></div>`;
+        acts = `<button class="btn line" data-act="closeSheet">Cerrar</button><button class="btn" data-act="sheet" data-s="nube">Activar varios celulares</button>`;
+      } else if (perm === "denied") {
+        sub = "Los avisos están bloqueados para Ronda.";
+        body = `<div class="aviso warn">${ic("alert")}<div>${esIOS() ? "Andá a Ajustes del iPhone → Notificaciones → Ronda y activá “Permitir notificaciones”." : "Activalos desde la configuración del navegador, en Notificaciones."}</div></div>`;
+      } else if (!on) {
+        sub = "A la hora de cada ronda te llega un aviso, aunque no tengas la app abierta.";
+        body = `<div class="stack">
+          <div class="row top"><span class="ic-c">${ic("bell")}</span><div><b>Suena como una notificación</b><div class="muted small">Con el sonido de notificaciones del celular. No suena si está en silencio o en No molestar.</div></div></div>
+          <div class="row top"><span class="ic-c">${ic("alert")}</span><div><b>Y otro aviso si quedan tomas sin dar</b><div class="muted small">A los ${S.cfg.margen} minutos de cada ronda.</div></div></div>
+        </div>${ui.nubeErr ? `<p class="err">${esc(ui.nubeErr)}</p>` : ""}`;
+        acts = `<button class="btn line" data-act="avisosNo">Ahora no</button><button class="btn" data-act="avisosActivar" ${ui.nubeOcupada ? "disabled" : ""}>${ic("bell", "s")} ${ui.nubeOcupada ? "Activando…" : "Activar"}</button>`;
+      } else {
+        sub = "Está activada en este celular.";
+        body = `${ui.pruebaEnviada ? `<div class="done-msg"><span class="ic">${ic("check")}</span><div><b>Cerrá la app ahora</b><span>En unos 15 segundos te llega el aviso de prueba.</span></div></div>` : `<p class="muted">Probala: tocá el botón, cerrá la app y esperá unos segundos.</p>`}`;
+        acts = `<button class="btn line" data-act="avisosDesactivar">Desactivar</button><button class="btn" data-act="avisosProbar">${ic("bell", "s")} Probar</button>`;
+      }
       break;
     }
     case "borrar":
