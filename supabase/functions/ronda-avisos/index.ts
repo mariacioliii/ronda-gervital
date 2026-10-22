@@ -34,11 +34,11 @@ async function enviar(centro: string, payload: Record<string, unknown>) {
   const { data: subs } = await sb.from("avisos_sub").select("endpoint,sub").eq("centro", centro);
   let ok = 0;
   for (const s of subs || []) {
-    try { await webpush.sendNotification(s.sub, JSON.stringify(payload), { TTL: 1800, urgency: "high" }); ok++; }
+    try { const r = await webpush.sendNotification(s.sub, JSON.stringify(payload), { TTL: 1800, urgency: "high" }); ok++; console.log("push ok", r.statusCode, s.endpoint.slice(0, 40)); }
     catch (e) {
       const code = (e as { statusCode?: number }).statusCode;
       if (code === 404 || code === 410) await sb.from("avisos_sub").delete().eq("endpoint", s.endpoint);
-      else console.error("push", code, (e as Error).message);
+      else console.error("push error", code, (e as Error).message, (e as { body?: string }).body || "");
     }
   }
   return ok;
@@ -104,6 +104,7 @@ Deno.serve(async (req) => {
     }
 
     if (req.headers.get("x-ronda-cron") !== priv.cron) return json({ error: "no autorizado" }, 401);
+    if (body.pruebaCentro) return json({ enviados: await enviar(body.pruebaCentro, { titulo: "Prueba de alarma", cuerpo: "Si ves esto, la alarma con la app cerrada funciona en este celular.", tag: "prueba" }) });
     const t = ahora();
     const { data: subs } = await sb.from("avisos_sub").select("centro");
     const centros = [...new Set((subs || []).map((s) => s.centro))];
