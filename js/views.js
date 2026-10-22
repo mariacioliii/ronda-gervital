@@ -361,12 +361,14 @@ function vPersonaEdit() {
         <label class="field grow" style="min-width:200px"><span>Contacto de referencia</span><input type="text" data-f="contacto" value="${esc(f.contacto)}" placeholder="Ej.: Laura (hija)"></label>
         <label class="field grow" style="min-width:160px"><span>Teléfono</span><input type="tel" data-f="tel" value="${esc(f.tel)}" placeholder="099 123 456"></label>
       </div>
-      ${!nueva ? `<button class="switch" data-act="fToggle" data-k="activo" role="switch" aria-checked="${f.activo}"><span class="grow"><b>Viene al centro</b><span>Si la desactivás, deja de aparecer en las rondas. Su historial se guarda.</span></span><span class="sw"></span></button>` : ""}
     </div>
     <div class="section"><h2 class="h3">Medicación en el centro</h2><div class="sp"></div><button class="btn sec sm" data-act="medNuevo">${ic("plus", "s")} Agregar</button></div>
     ${f.meds.filter((m) => !m._del).length ? `<div class="list">${f.meds.map((m, i) => m._del ? "" : `
       <div class="li"><span class="ic">${ic("pill")}</span><span class="grow"><span class="t">${esc(m.nombre)} <span class="muted" style="font-weight:400">${esc(m.dosis || "")}</span></span><span class="d" style="display:block">${m.horas.join(" · ") || "Sin horario"}${m.indicacion ? " · " + esc(m.indicacion) : ""}</span></span><button class="btn line xs" data-act="medEdit" data-i="${i}">Editar</button></div>`).join("")}</div>`
       : `<div class="aviso">${ic("pill")}<div>Todavía no tiene medicación. Agregá cada medicamento con su dosis y horario.</div></div>`}
+    ${!nueva ? `<div class="baja card pad">${f.activo !== false
+      ? `<div class="grow"><b>Dar de baja</b><p>Si ya no viene al centro, deja de aparecer en las rondas y sus alarmas no suenan. Su historial queda guardado.</p></div><button class="btn danger" data-act="sheet" data-s="baja">${ic("ausente", "s")} Dar de baja</button>`
+      : `<div class="grow"><b>Está dada de baja</b><p>No aparece en las rondas. Si vuelve al centro, dala de alta otra vez.</p></div><button class="btn sec" data-act="darAlta">${ic("vino", "s")} Dar de alta</button>`}</div>` : ""}
     ${ui.formErr ? `<p class="err" style="margin-top:14px">${esc(ui.formErr)}</p>` : ""}
     <div class="formbar"><button class="btn line" data-act="back">Cancelar</button><button class="btn" data-act="guardarPersona">${ic("check")} Guardar</button></div>`;
 }
@@ -624,6 +626,12 @@ function vSheet() {
       title = "Probar la alarma"; sub = "Así suena cuando llega una ronda y cuando quedan tomas atrasadas.";
       body = `<div class="opts"><button class="opt" data-act="probarAlarma" data-k="ronda"><span class="oi sol">${ic("bell")}</span><span class="grow">Llegó la ronda<small>Campana suave, suena 4 veces</small></span></button><button class="opt" data-act="probarAlarma" data-k="atraso"><span class="oi bad">${ic("alert")}</span><span class="grow">Quedan tomas atrasadas<small>Más insistente, hasta que alguien la mire</small></span></button></div>`;
       break;
+    case "baja": {
+      const n = primerNombre(f.nombre || "esta persona");
+      title = `¿Dar de baja a ${n}?`; sub = "Deja de aparecer en las rondas y no suenan alarmas por su medicación. Su historial queda guardado y la podés volver a dar de alta cuando quieras.";
+      acts = `<button class="btn line" data-act="closeSheet">Cancelar</button><button class="btn danger" data-act="darBaja">${ic("ausente", "s")} Dar de baja</button>`;
+      break;
+    }
     case "borrar":
       title = "¿Borrar todos los datos?"; sub = "Se borran personas, medicación, equipo e historial de este dispositivo. No se puede deshacer.";
       body = `<p class="muted small">Si querés conservarlos, primero hacé una copia de seguridad.</p><label class="field"><span>Escribí BORRAR para confirmar</span><input type="text" data-f="conf" value="${esc(f.conf || "")}" autocapitalize="characters"></label>`;

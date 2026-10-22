@@ -49,8 +49,8 @@ const ICONS = {
 };
 const ic = (name, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ""}</svg>`;
 
-/* Marca: dos personas que forman un corazón, como el logo de Gervital */
-const MARK = '<svg class="mk" viewBox="0 0 48 48" aria-hidden="true"><circle class="a" cx="14.5" cy="9" r="6.2"/><circle class="b" cx="33.5" cy="9" r="6.2"/><path class="a" d="M24 22.5C18.5 14.8 5.5 15.2 5.5 25.4c0 7.4 8 13.3 18.5 20.1z"/><path class="b" d="M24 22.5c5.5-7.7 18.5-7.3 18.5 2.9 0 7.4-8 13.3-18.5 20.1z"/></svg>';
+/* Marca: el isotipo de Gervital (dos personas que forman un corazón), pintado con el color del contexto */
+const MARK = '<span class="mk" aria-hidden="true"></span>';
 const LOGO_BLANCO = window.LOGO_BLANCO || "img/logo-blanco-480.png";
 const marca = (sub = "Gervital") => `<div class="marca">${MARK}<div><b>ronda</b><small>${esc(sub)}</small></div></div>`;
 const avatar = (obj, cls = "") => `<span class="av ${cls} ${obj && obj.activo === false ? "off" : ""}" style="--c:${avColor(obj?.id)}" aria-hidden="true">${esc(iniciales(obj?.nombre))}</span>`;

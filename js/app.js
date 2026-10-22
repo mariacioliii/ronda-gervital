@@ -267,6 +267,8 @@ const A = {
   },
   fDia(d) { const n = +d.n, f = ui.form; f.dias = f.dias.includes(n) ? f.dias.filter((x) => x !== n) : [...f.dias, n].sort(); },
   fToggle(d) { ui.form[d.k] = !ui.form[d.k]; },
+  darBaja() { const n = primerNombre(ui.form.nombre); ui.form.activo = false; ui.sheet = null; A.guardarPersona(); if (!ui.form) { ui.ficha = null; toast(`${n} quedó dada de baja. La encontrás en Personas, en "Dadas de baja".`); } },
+  darAlta() { const n = primerNombre(ui.form.nombre); ui.form.activo = true; A.guardarPersona(); if (!ui.form) toast(`${n} volvió a estar activa`); },
   medNuevo() { ui.form.med = { _nuevo: true, nombre: "", dosis: "", indicacion: "", horas: [], nuevaHora: "" }; ui.medErr = null; openSheet("med"); },
   medEdit(d) { ui.form.med = { ...clone(ui.form.meds[+d.i]), _i: +d.i, nuevaHora: "" }; ui.medErr = null; openSheet("med"); },
   medHoraAdd() { const m = ui.form.med; const h = normHora(m.nuevaHora); if (!h) { ui.medErr = "Elegí una hora."; return; } if (!m.horas.includes(h)) m.horas = [...m.horas, h].sort(); m.nuevaHora = ""; ui.medErr = null; },
