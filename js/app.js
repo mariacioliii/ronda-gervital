@@ -75,7 +75,9 @@ function render() {
 
   if (focusSel) { const el = $(focusSel); if (el) { el.focus({ preventScroll: true }); if (caret != null) try { el.setSelectionRange(caret, caret); } catch (e) {} } }
   if (sc) sc.scrollTop = scrollY; else window.scrollTo(0, scrollY);
+  marcoScroll();
 }
+function marcoScroll() { const a = $("#app"); a.style.setProperty("--st", (scroller() ? a.scrollTop : 0) + "px"); }
 function attrSel(el) {
   for (const a of ["data-f", "data-fm", "data-fu", "data-pf", "data-hf", "data-imp"]) if (el.hasAttribute(a)) return `[${a}="${el.getAttribute(a)}"]`;
   return null;
@@ -486,6 +488,7 @@ document.addEventListener("keydown", (ev) => {
   if (!S.user && ui.login.uid && /^[0-9]$/.test(ev.key)) { A.pin({ k: ev.key }).then(render); }
   if (!S.user && ui.login.uid && ev.key === "Backspace") { A.pin({ k: "del" }).then(render); }
 });
+document.addEventListener("scroll", (ev) => { if (ev.target.id === "app") marcoScroll(); }, { capture: true, passive: true });
 window.addEventListener("scroll", () => { const t = $(".topbar"); if (t) t.classList.toggle("scrolled", window.scrollY > 4); }, { passive: true });
 document.addEventListener("click", (ev) => { if (ev.target.closest("#vista")) Vista.toggle(); });
 window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredInstall = e; });

@@ -423,7 +423,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--violeta); box-sh
 .hora-chip button { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; }
 .hora-chip button:hover { background: rgba(0, 0, 0, .06); }
 .horas input[type=time] { width: 140px; min-height: 46px; }
-.formbar { position: sticky; bottom: 0; display: flex; gap: 10px; padding: 14px 0 calc(14px + var(--safe-b)); background: linear-gradient(to top, var(--bg) 70%, transparent); margin-top: 10px; }
+.formbar { position: sticky; bottom: calc(var(--tab-h) + var(--safe-b)); display: flex; gap: 10px; padding: 14px 0 calc(14px + var(--safe-b)); background: linear-gradient(to top, var(--bg) 70%, transparent); margin-top: 10px; }
 .formbar .btn { flex: 1; }
 .subhead { display: flex; align-items: center; gap: 6px; margin: 4px 0 14px; }
 .subhead .h2 { flex: 1; }
@@ -592,6 +592,8 @@ html.phone #app {
 html.phone #app::-webkit-scrollbar { display: none; }
 html.phone .shell, html.phone .gate, html.phone .splash { min-height: 100%; }
 html.phone .tabs, html.phone .toast, html.phone .scrim, html.phone .drawer, html.phone .drawer-scrim, html.phone .alarm { position: fixed; }
+/* Dentro del marco de celular "fixed" se mueve con el contenido: se corre lo que se scrolleó */
+html.phone .tabs, html.phone .toast, html.phone .scrim, html.phone .drawer, html.phone .drawer-scrim, html.phone .alarm { translate: 0 var(--st, 0px); }
 html.phone .topbar { padding-top: 14px; }
 html.phone #vista-cap { display: block; max-width: 340px; color: var(--violeta-hondo); }
 html.phone #vista-cap .mk { width: 64px; height: 64px; color: var(--violeta); }
