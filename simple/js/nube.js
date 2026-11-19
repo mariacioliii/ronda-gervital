@@ -106,6 +106,37 @@ const Nube = {
     await this.sincronizar();
     await loadAll();
   },
+
+  /* ---------- Cuentas: usuario y contraseña ---------- */
+  async hayCuentas() { return !!(await this.rpc("ronda_hay_cuentas", {})); },
+  async entrar(usuario, pass) {
+    let r;
+    try { r = await this.rpc("ronda_entrar", { p_usuario: usuario, p_pass: pass }); }
+    catch (e) { throw new Error(e.status ? (String(e.message).includes("muchos") ? "muchos" : "error") : "red"); }
+    if (!r || !r.clave) throw new Error("datos");
+    if (r.clave !== this.clave) {
+      await DB.clearAll();
+      lsSet("ronda-centro", r.clave); lsSet("ronda-seq", "0"); this.guardarCola({});
+    }
+    await this.sincronizar();
+    await loadAll();
+    return r.staff;
+  },
+  /* La primera cuenta: crea el espacio de Gervital en la nube */
+  async primerAdmin(usuario, pass, staffId) {
+    if (!this.clave) await this.crear(); else await this.sincronizar();
+    await this.rpc("ronda_primer_admin", { p_clave: this.clave, p_usuario: usuario, p_pass: pass, p_staff: staffId });
+  },
+  async cuentaGuardar(staffId, usuario, pass, activo) {
+    try { await this.rpc("ronda_cuenta_guardar", { p_clave: this.clave, p_staff: staffId, p_usuario: usuario, p_pass: pass || null, p_activo: activo !== false }); }
+    catch (e) { const m = String(e.message); throw new Error(m.includes("ocupado") ? "ocupado" : m.includes("corta") ? "corta" : e.status ? "error" : "red"); }
+  },
+  async cambiarPass(usuario, actual, nueva) {
+    let ok;
+    try { ok = await this.rpc("ronda_cambiar_pass", { p_usuario: usuario, p_actual: actual, p_nueva: nueva }); }
+    catch (e) { throw new Error(e.status ? "error" : "red"); }
+    if (!ok) throw new Error("actual");
+  },
   salir() { lsDel("ronda-centro"); lsDel("ronda-seq"); lsDel("ronda-cola"); this.estado = "off"; },
   link() { return `${location.origin}${location.pathname}#centro=${this.clave}`; },
 

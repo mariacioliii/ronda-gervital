@@ -6,8 +6,7 @@ const UI0 = () => ({
   ronda: null,
   pf: { q: "", act: true, dia: null },
   hf: { rango: "7", pid: "", estado: "" },
-  login: { uid: null, pin: "", err: "" },
-  setup: { step: 1 },
+  modo: "login", // login · crear
   imp: null,
 });
 let ui = UI0();
@@ -58,8 +57,7 @@ function render() {
 
   let html;
   if (!listo) html = vSplash();
-  else if (!S.staff.length) { if (!ui.sheet && !ui.form) ui.form = { nombre: "" }; html = vSetup(); }
-  else if (!S.user) html = vLogin();
+  else if (!S.user) { if (!ui.form) ui.form = {}; html = ui.modo === "crear" ? vSetup() : vLogin(); }
   else {
     let content;
     if (ui.sub === "persona") content = vPersonaEdit();
@@ -115,63 +113,50 @@ function darToma(id, horaReal, join) {
   return t;
 }
 
+function iniciarSesion(u, silencioso) {
+  S.user = u; lsSet("ronda-sesion", u.id); lastActivity = Date.now();
+  if (!silencioso) Sound.unlock();
+  ui = { ...UI0(), tab: "hoy" };
+}
+
 /* ---------- Acciones ---------- */
 const A = {
-  /* Primer uso */
-  setupNext() {
-    const st = ui.setup; ui.form = ui.form || { nombre: "" };
-    if (!(ui.form.nombre || "").trim()) { st.err = "Escribí tu nombre."; return; }
-    st.err = null; st.step = 2; st.pin = ""; st.pin1 = null;
+  /* Entrada */
+  verPass() { ui.ver = !ui.ver; },
+  async entrar() {
+    const f = ui.form || {};
+    const usuario = (f.usuario || "").trim(), pass = f.pass || "";
+    if (!usuario || !pass) { ui.loginErr = "Escribí tu usuario y tu contraseña."; return; }
+    ui.ocupado = true; ui.loginErr = null; ui.loginMsg = null; render();
+    try {
+      const sid = await Nube.entrar(usuario, pass);
+      const u = staffById(sid);
+      if (!u || u.activo === false) throw new Error("datos");
+      iniciarSesion(u);
+    } catch (e) {
+      ui.loginErr = e.message === "red" ? "No hay internet. Conectate y probá de nuevo." : e.message === "muchos" ? "Demasiados intentos. Esperá unos minutos." : e.message === "datos" ? "Usuario o contraseña incorrectos." : "No se pudo entrar. Probá de nuevo.";
+      try { navigator.vibrate && navigator.vibrate(120); } catch (er) {}
+    } finally { ui.ocupado = false; }
   },
-  setupBack() {
-    const st = ui.setup; st.err = null;
-    if (st.pin1 != null) { st.pin1 = null; st.pin = ""; return; }
-    st.step = 1;
+  async crearAdmin() {
+    const f = ui.form || {};
+    const nombre = (f.nombre || "").trim(), usuario = (f.usuario || "").trim().toLowerCase(), pass = f.pass || "";
+    if (!nombre || !usuario || !pass) { ui.loginErr = "Completá los tres datos."; return; }
+    if (!/^[a-z0-9._-]{3,}$/.test(usuario)) { ui.loginErr = "El usuario va sin espacios ni tildes (mínimo 3 letras)."; return; }
+    if (pass.length < 4) { ui.loginErr = "La contraseña tiene que tener al menos 4 caracteres."; return; }
+    ui.ocupado = true; ui.loginErr = null; render();
+    try {
+      const u = { id: uid("u-"), nombre, usuario, rol: "", admin: true, activo: true, creado: Date.now() };
+      saveStaff(u);
+      saveCfg({ inicio: today(), responsableHabitual: null });
+      await Nube.primerAdmin(usuario, pass, u.id);
+      iniciarSesion(u);
+    } catch (e) {
+      ui.loginErr = String(e.message).includes("ya hay") ? "Ya existe una cuenta. Entrá con tu usuario." : "No se pudo crear. Revisá la conexión y probá de nuevo.";
+      if (String(e.message).includes("ya hay")) { ui.modo = "login"; await DB.clearAll(); Nube.salir(); await loadAll(); }
+    } finally { ui.ocupado = false; }
   },
-  async setupPin(d) {
-    const st = ui.setup; st.shake = false; st.err = "";
-    if (d.k === "del") { st.pin = (st.pin || "").slice(0, -1); return; }
-    if ((st.pin || "").length >= 4) return;
-    st.pin = (st.pin || "") + d.k;
-    if (st.pin.length < 4) return;
-    if (st.pin1 == null) { st.pin1 = st.pin; st.pin = ""; return; }
-    if (st.pin !== st.pin1) { st.pin = ""; st.pin1 = null; st.shake = true; st.err = "No coinciden. Elegilo de nuevo."; return; }
-    const salt = uid();
-    const u = { id: uid("u-"), nombre: ui.form.nombre.trim(), rol: "", admin: true, activo: true, salt, pin: await hashPin(st.pin, salt), cambiarPin: false, creado: Date.now() };
-    saveStaff(u);
-    saveCfg({ inicio: today(), responsableHabitual: null });
-    S.user = u; ui = UI0(); Sound.unlock(); lastActivity = Date.now();
-  },
-
-  /* Ingreso */
-  loginUser(d) {
-    const u = staffById(d.uid);
-    if (u && !u.admin && u.activo !== false) { S.user = u; lastActivity = Date.now(); Sound.unlock(); ui = { ...UI0(), tab: "hoy" }; return; }
-    ui.login = { uid: d.uid, pin: "", err: "", fails: 0 }; ui.loginMsg = null;
-  },
-  loginBack() { ui.login = { uid: null, pin: "", err: "" }; },
-  async pin(d) {
-    const L = ui.login; L.shake = false;
-    if (L.lockUntil && Date.now() < L.lockUntil) return;
-    if (d.k === "del") { L.pin = L.pin.slice(0, -1); L.err = ""; return; }
-    if (L.pin.length >= 4) return;
-    L.pin += d.k; L.err = "";
-    if (L.pin.length < 4) return;
-    const u = staffById(L.uid);
-    const ok = u && u.activo !== false && (await hashPin(L.pin, u.salt)) === u.pin;
-    if (ok) {
-      S.user = u; lastActivity = Date.now(); Sound.unlock();
-      const keep = { tab: "hoy" }; ui = { ...UI0(), ...keep };
-      if (u.cambiarPin && u.admin) { ui.form = {}; openSheet("pin"); }
-      if (Alarm.activa) {} // la alarma sigue visible
-    } else {
-      L.fails = (L.fails || 0) + 1; L.pin = ""; L.shake = true;
-      L.err = L.fails >= 5 ? "" : "PIN incorrecto. Probá de nuevo.";
-      if (L.fails >= 5) { L.lockUntil = Date.now() + 30000; L.fails = 0; setTimeout(render, 30100); }
-      try { navigator.vibrate && navigator.vibrate(120); } catch (e) {}
-    }
-  },
-  logout() { Sound.stop(); S.user = null; ui = UI0(); },
+  logout() { Sound.stop(); S.user = null; lsDel("ronda-sesion"); ui = UI0(); },
 
   /* Navegación */
   tab(d) { goTab(d.tab); },
@@ -188,17 +173,18 @@ const A = {
       ui.form = { motivo: "", nota: "", horaReal: "" };
     } else if (s === "miembro") {
       const u = d.uid ? staffById(d.uid) : null;
-      ui.form = { u: u ? { ...u, pin: "", resp: S.cfg.responsableHabitual === u.id } : { _nuevo: true, nombre: "", rol: "Cuidado", pin: "", admin: false, resp: false, activo: true } };
+      ui.form = { u: u ? { ...u, pass: "" } : { _nuevo: true, nombre: "", usuario: "", pass: "", admin: false, activo: true } };
     } else if (["pin", "borrar"].includes(s)) ui.form = {};
     else if (s === "unir") { ui.form = { unir: d.v || "" }; ui.nubeErr = null; }
     else if (["nube", "avisos"].includes(s)) { ui.nubeErr = null; if (ui.sub !== "persona") ui.form = null; }
     else if (s !== "restore") { if (ui.sub !== "persona") ui.form = null; }
     openSheet(s, { id: d.id, pid: d.pid });
   },
-  closeSheet() { if (S.user?.cambiarPin && ui.sheet?.s === "pin") return; closeSheet(); },
+  closeSheet() { closeSheet(); },
   scrim(d, el, ev) { if (ev.target === el) A.closeSheet(); },
   fSet(d) { ui.form[d.k] = d.v; },
   ronda(d) { ui.ronda = d.h; toTop(); },
+  verRonda(d) { ui.ag = ui.ag || {}; const cur = d.h in ui.ag ? ui.ag[d.h] : !!d.def; ui.ag[d.h] = !cur; },
   pfAct(d) { ui.pf.act = d.v === "1"; toTop(); },
   pfDia(d) { ui.pf.dia = d.n ? +d.n : null; },
   hf(d) { ui.hf[d.k] = d.v; },
@@ -312,27 +298,39 @@ const A = {
   uToggle(d) { const u = ui.form.u; if (d.k === "activo") u.activo = u.activo === false; else u[d.k] = !u[d.k]; },
   async guardarMiembro() {
     const u = ui.form.u;
-    if (!u.nombre.trim()) { ui.uErr = "Escribí el nombre."; render(); return; }
-    if (u.id === S.user.id && !u.admin) { ui.uErr = "No podés quitarte a vos la administración."; render(); return; }
-    if (u.id === S.user.id && u.activo === false) { ui.uErr = "No podés quitarte el acceso a vos."; render(); return; }
+    const usuario = (u.usuario || "").trim().toLowerCase();
+    if (!u.nombre.trim()) { ui.uErr = "Escribí el nombre."; return; }
+    if (!/^[a-z0-9._-]{3,}$/.test(usuario)) { ui.uErr = "El usuario va sin espacios ni tildes (mínimo 3 letras)."; return; }
+    if (S.staff.some((x) => x.id !== u.id && (x.usuario || "") === usuario)) { ui.uErr = "Ese usuario ya existe. Elegí otro."; return; }
+    if (u._nuevo && (u.pass || "").length < 4) { ui.uErr = "La contraseña tiene que tener al menos 4 caracteres."; return; }
+    if (!u._nuevo && u.pass && u.pass.length < 4) { ui.uErr = "La contraseña tiene que tener al menos 4 caracteres."; return; }
     const prev = u._nuevo ? null : staffById(u.id);
-    const out = { ...(prev || {}), id: u.id || uid("u-"), nombre: u.nombre.trim(), rol: prev?.rol || "", admin: !!u.admin, activo: u.activo !== false, creado: prev?.creado || Date.now() };
-    if (u.pin) { out.salt = uid(); out.pin = await hashPin(u.pin, out.salt); out.cambiarPin = out.id !== S.user.id; delete out.ejemplo; }
+    const out = { ...(prev || {}), id: u.id || uid("u-"), nombre: u.nombre.trim(), usuario, rol: prev?.rol || "", admin: !!u.admin, activo: u.activo !== false, creado: prev?.creado || Date.now() };
+    delete out.pin; delete out.salt; delete out.cambiarPin; delete out.ejemplo; delete out.pass; delete out._nuevo;
+    ui.ocupado = true; ui.uErr = null; render();
+    try { await Nube.cuentaGuardar(out.id, usuario, u.pass || null, out.activo); }
+    catch (e) { ui.ocupado = false; ui.uErr = e.message === "ocupado" ? "Ese usuario ya existe. Elegí otro." : e.message === "red" ? "No hay internet. Conectate y probá de nuevo." : "No se pudo guardar. Probá de nuevo."; return; }
+    ui.ocupado = false;
     saveStaff(out);
     if (out.id === S.user.id) S.user = out;
-    ui.sheet = null; ui.form = null; ui.uErr = null;
-    toast(u._nuevo ? `Listo. ${primerNombre(out.nombre)} ya aparece al abrir la app.` : "Cambios guardados");
+    ui.uErr = null;
+    if (u.pass) { ui.form = { creado: { nombre: out.nombre, usuario, pass: u.pass } }; openSheet("creado"); }
+    else { ui.sheet = null; ui.form = null; toast("Cambios guardados"); }
+  },
+  async credCompartir() {
+    const c = ui.form?.creado; if (!c) return;
+    const txt = `Ronda · Gervital\n${location.origin}${location.pathname}\nUsuario: ${c.usuario}\nContraseña: ${c.pass}`;
+    try { if (navigator.share) { await navigator.share({ text: txt }); return; } } catch (e) { return; }
+    try { await navigator.clipboard.writeText(txt); toast("Copiado. Pegalo en WhatsApp."); } catch (e) {}
   },
   async guardarPin() {
-    const f = ui.form; const u = S.user;
-    if (!u.cambiarPin && (await hashPin(f.actual || "", u.salt)) !== u.pin) { ui.pinErr = "El PIN actual no es correcto."; render(); return; }
-    if (!/^\d{4}$/.test(f.nuevo || "")) { ui.pinErr = "El PIN nuevo tiene que tener 4 números."; render(); return; }
-    if (f.nuevo !== f.nuevo2) { ui.pinErr = "Los dos PIN no coinciden."; render(); return; }
-    const salt = uid();
-    const out = { ...u, salt, pin: await hashPin(f.nuevo, salt), cambiarPin: false }; delete out.ejemplo;
-    saveStaff(out); S.user = out;
-    ui.sheet = null; ui.form = null; ui.pinErr = null;
-    toast("Tu PIN quedó guardado");
+    const f = ui.form;
+    if ((f.nuevo || "").length < 4) { ui.pinErr = "La nueva tiene que tener al menos 4 caracteres."; return; }
+    ui.ocupado = true; ui.pinErr = null; render();
+    try { await Nube.cambiarPass(S.user.usuario, f.actual || "", f.nuevo); }
+    catch (e) { ui.ocupado = false; ui.pinErr = e.message === "actual" ? "La contraseña actual no es correcta." : e.message === "red" ? "No hay internet." : "No se pudo cambiar."; return; }
+    ui.ocupado = false; ui.sheet = null; ui.form = null;
+    toast("Contraseña cambiada");
   },
 
   /* Ajustes */
@@ -512,6 +510,11 @@ document.addEventListener("input", (ev) => {
   else if (d.hf != null) { ui.hf[d.hf] = el.value; render(); }
   else if (d.imp != null) { ui.imp = ui.imp || {}; ui.imp[d.imp] = el.value; }
 });
+document.addEventListener("submit", async (ev) => {
+  const f = ev.target.closest("[data-submit]"); if (!f) return;
+  ev.preventDefault(); Sound.unlock();
+  const a = f.dataset.submit; if (A[a]) { await A[a](f.dataset, f, ev); render(); }
+});
 document.addEventListener("change", async (ev) => {
   const el = ev.target;
   if (el.dataset.actChange === "impFile" && el.files[0]) {
@@ -523,8 +526,6 @@ document.addEventListener("change", async (ev) => {
 document.addEventListener("keydown", (ev) => {
   lastActivity = Date.now();
   if (ev.key === "Escape") { if (Alarm.activa) A.alarmSilenciar(); else if (ui.sheet) A.closeSheet(); else if (ui.ficha) ui.ficha = null; else return; render(); }
-  if (!S.user && ui.login.uid && /^[0-9]$/.test(ev.key)) { A.pin({ k: ev.key }).then(render); }
-  if (!S.user && ui.login.uid && ev.key === "Backspace") { A.pin({ k: "del" }).then(render); }
 });
 document.addEventListener("scroll", (ev) => { if (ev.target.id === "app") marcoScroll(); }, { capture: true, passive: true });
 window.addEventListener("scroll", () => { const t = $(".topbar"); if (t) t.classList.toggle("scrolled", window.scrollY > 4); }, { passive: true });
@@ -537,8 +538,8 @@ window.addEventListener("online", () => Nube.sincronizar());
 function tick(force) {
   if (!listo) return;
   // cierre de sesión por inactividad
-  if (S.user && Date.now() - lastActivity > S.cfg.autoLogout * 60000 && !Alarm.activa) {
-    S.user = null; ui = UI0(); ui.loginMsg = "La sesión se cerró porque no se usó por un rato."; render(); return;
+  if (S.user && staffById(S.user.id)?.activo === false) {
+    S.user = null; lsDel("ronda-sesion"); ui = UI0(); ui.loginMsg = "Tu usuario ya no tiene acceso."; render(); return;
   }
   const m = nowMin();
   $$(".js-hora").forEach((e) => (e.textContent = hm(m)));
@@ -556,13 +557,10 @@ async function start() {
   await loadAll();
   listo = true;
   lastMin = nowMin();
-  const inv = leerClave(location.hash);
-  if (inv && Nube.disponible) {
-    history.replaceState(null, "", location.pathname + location.search);
-    if (inv === Nube.clave) {}
-    else if (!S.staff.length) { try { await Nube.unirse(inv, false); toast("Te uniste al equipo. Entrá con tu PIN."); } catch (e) { A.sheet({ s: "unir", v: inv }); } }
-    else A.sheet({ s: "unir", v: inv });
-  }
+  history.replaceState(null, "", location.pathname + location.search);
+  const sid = lsGet("ronda-sesion");
+  if (sid && Nube.activa && staffById(sid) && staffById(sid).activo !== false) iniciarSesion(staffById(sid), true);
+  else if (!S.user) Nube.hayCuentas().then((hay) => { if (!hay && !S.user) { ui.modo = "crear"; render(); } }).catch(() => {});
   render();
   if (Nube.activa) Nube.sincronizar();
   setInterval(tick, 10000);
