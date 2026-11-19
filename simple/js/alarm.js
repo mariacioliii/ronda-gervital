@@ -3,9 +3,9 @@
 
 /* Notas de cada aviso: [frecuencia, inicio (s), duración (s), volumen, forma] */
 const NOTAS = {
-  ronda: [[659.25, 0, 1.1, 0.32, "sine"], [783.99, 0.22, 1.1, 0.32, "sine"], [987.77, 0.44, 1.1, 0.32, "sine"],
-    [1318.5, 0, 0.5, 0.05, "sine"], [1567.98, 0.22, 0.5, 0.05, "sine"], [1975.53, 0.44, 0.5, 0.05, "sine"]],
-  atraso: [[880, 0, 0.18, 0.38, "triangle"], [660, 0.2, 0.18, 0.38, "triangle"], [880, 0.4, 0.18, 0.38, "triangle"], [660, 0.6, 0.18, 0.38, "triangle"]],
+  ronda: [[659.25, 0, 1.1, 0.55, "sine"], [783.99, 0.22, 1.1, 0.55, "sine"], [987.77, 0.44, 1.1, 0.55, "sine"],
+    [1318.5, 0, 0.5, 0.08, "sine"], [1567.98, 0.22, 0.5, 0.08, "sine"], [1975.53, 0.44, 0.5, 0.08, "sine"]],
+  atraso: [[880, 0, 0.18, 0.6, "triangle"], [660, 0.2, 0.18, 0.6, "triangle"], [880, 0.4, 0.18, 0.6, "triangle"], [660, 0.6, 0.18, 0.6, "triangle"]],
 };
 
 /* Arma un WAV con las notas. Sirve de respaldo cuando el celular no deja usar Web Audio. */
@@ -76,10 +76,12 @@ const Sound = {
     let n = 0;
     const one = () => { try { this.sonar(kind); } catch (e) {} this.vibrar(kind); };
     setTimeout(one, 60);
+    /* Modo guardia: suena sin parar hasta que alguien toque la pantalla (tope de 10 minutos) */
+    const paso = kind === "ronda" ? 2600 : 1150, tope = Math.ceil(600000 / paso);
     this.timer = setInterval(() => {
-      if (++n >= (kind === "ronda" ? 4 : 20)) { this.stop(); return; }
+      if (++n >= tope) { this.stop(); return; }
       one();
-    }, kind === "ronda" ? 2600 : 1150);
+    }, paso);
   },
   vibrar(kind) {
     if (!S.cfg.vibrar) return;
@@ -134,3 +136,15 @@ async function notificar(titulo, cuerpo) {
     if (reg) reg.showNotification(titulo, opts); else new Notification(titulo, opts);
   } catch (e) {}
 }
+
+/* Modo guardia: la pantalla no se apaga mientras Ronda está abierta, así la alarma siempre suena */
+const Guardia = {
+  lock: null,
+  async pedir() {
+    if (!("wakeLock" in navigator) || document.visibilityState !== "visible" || this.lock) return;
+    try { this.lock = await navigator.wakeLock.request("screen"); this.lock.addEventListener("release", () => { this.lock = null; }); } catch (e) {}
+  },
+};
+document.addEventListener("visibilitychange", () => Guardia.pedir());
+for (const ev of ["pointerdown", "touchend"]) document.addEventListener(ev, () => Guardia.pedir(), { passive: true, capture: true });
+Guardia.pedir();
