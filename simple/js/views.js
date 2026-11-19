@@ -13,102 +13,56 @@ const medTxt = (m) => `${esc(m.nombre)}${m.dosis ? ` <span>${esc(m.dosis)}</span
 /* ---------- Carga ---------- */
 function vSplash() { return `<div class="splash">${MARK}</div>`; }
 
-/* ---------- Primer uso ---------- */
-/* Se hace una sola vez, en la PC del centro: nombre y PIN de quien administra. */
-function vSetup() {
-  const st = ui.setup;
-  const f = ui.form || {};
-  let body = "";
-  if (st.step === 1) {
-    body = `
-      <h1>Hola, esta es Ronda</h1>
-      <p class="lead">Avisa cuándo toca dar la medicación y guarda quién la dio. Para empezar, escribí tu nombre.</p>
-      <label class="field"><span>Tu nombre</span><input type="text" data-f="nombre" value="${esc(f.nombre || "")}" autocomplete="name" placeholder="Ej.: María Pérez"></label>
-      ${st.err ? `<p class="err">${esc(st.err)}</p>` : ""}
-      <button class="btn block" data-act="setupNext">Seguir</button>
-      ${Nube.disponible ? `<button class="link" style="margin-top:16px" data-act="sheet" data-s="unir">Me mandaron el link de Gervital</button>` : ""}`;
-  } else {
-    const repetir = st.pin1 != null;
-    const n = (st.pin || "").length;
-    body = `
-      <div class="pinbox">
-        <h1>${repetir ? "Repetí el PIN" : "Elegí un PIN"}</h1>
-        <p class="lead" style="margin-bottom:0">${repetir ? "Escribilo otra vez para confirmarlo." : "4 números. Te lo pide solo para entrar a los ajustes."}</p>
-        <div class="pindots ${st.shake ? "shake" : ""}" aria-label="${n} de 4 números">${[0, 1, 2, 3].map((i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</div>
-        <div role="alert" class="err" style="margin:6px 0 0;min-height:22px">${esc(st.err || "")}</div>
-        <div class="pinpad">
-          ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((k) => `<button data-act="setupPin" data-k="${k}">${k}</button>`).join("")}
-          <button class="fn" data-act="setupBack">Volver</button>
-          <button data-act="setupPin" data-k="0">0</button>
-          <button class="fn" data-act="setupPin" data-k="del" aria-label="Borrar">${ic("undo")}</button>
-        </div>
-      </div>`;
-  }
-  return `<div class="gate"><div class="gh"><img src="${LOGO_BLANCO}" alt="Gervital, Centro Diurno Gerontológico"></div><div class="gb"><div class="panel">${body}</div></div></div>`;
+/* ---------- Entrada ---------- */
+/* Siempre es Gervital. Cada persona entra con el usuario y la contraseña que le dio quien administra.
+   Solo la primerísima vez (cuando todavía no hay ninguna cuenta) se crea la de administración. */
+function vGate(body) {
+  return `<div class="gate2"><div class="g-top"><img src="${LOGO_BLANCO}" alt="Gervital"><div class="g-app">${MARK}<b>ronda</b></div></div><div class="g-card">${body}</div></div>`;
 }
-
-/* ---------- Ingreso con PIN ---------- */
+function vSetup() {
+  const f = ui.form || {};
+  return vGate(`
+    <h1>Crear la cuenta de administración</h1>
+    <p class="g-sub">Se hace una sola vez.</p>
+    <label class="fld"><input type="text" data-f="nombre" value="${esc(f.nombre || "")}" autocomplete="name" placeholder=" "><span>Tu nombre</span></label>
+    <label class="fld"><input type="text" data-f="usuario" value="${esc(f.usuario || "")}" autocapitalize="off" autocomplete="username" spellcheck="false" placeholder=" "><span>Usuario</span></label>
+    <label class="fld"><input type="${ui.ver ? "text" : "password"}" data-f="pass" value="${esc(f.pass || "")}" autocomplete="new-password" placeholder=" "><span>Contraseña</span><button type="button" class="ojo" data-act="verPass" aria-label="Mostrar contraseña">${ic("eye", "s")}</button></label>
+    ${ui.loginErr ? `<p class="err">${esc(ui.loginErr)}</p>` : ""}
+    <button class="btn block big" data-act="crearAdmin" ${ui.ocupado ? "disabled" : ""}>${ui.ocupado ? "Creando…" : "Crear y entrar"}</button>`);
+}
 function vLogin() {
-  const L = ui.login;
-  const activos = S.staff.filter((u) => u.activo !== false);
-  const resp = responsableHoy();
-  let body;
-  if (!L.uid) {
-    const cuid = activos.filter((u) => !u.admin).sort((a, b) => a.nombre.localeCompare(b.nombre));
-    const adm = activos.filter((u) => u.admin);
-    body = `
-      <h1>¿Quién sos?</h1>
-      <p class="lead">Tocá tu nombre.</p>
-      ${ui.loginMsg ? `<div class="aviso info" style="margin-bottom:14px">${ic("lock")}<div>${esc(ui.loginMsg)}</div></div>` : ""}
-      <div class="quienes">${(cuid.length ? cuid : adm).map((u) => `
-        <button class="quien" data-act="loginUser" data-uid="${u.id}">${avatar(u, "lg")}<b>${esc(u.nombre)}</b></button>`).join("")}
-      </div>
-      ${cuid.length ? adm.map((u) => `<button class="link" style="margin-top:16px;display:inline-flex;gap:6px;align-items:center" data-act="loginUser" data-uid="${u.id}">${ic("lock", "s")} Entrar como ${esc(primerNombre(u.nombre))} (ajustes)</button>`).join("<br>") : ""}`;
-  } else {
-    const u = staffById(L.uid);
-    const bloqueado = L.lockUntil && Date.now() < L.lockUntil;
-    body = `
-      <div class="pinbox">
-        <div class="row" style="justify-content:center">${avatar(u, "lg")}</div>
-        <h1 style="margin-top:10px">Hola, ${esc(primerNombre(u.nombre))}</h1>
-        <p class="lead" style="margin-bottom:0">${bloqueado ? "Demasiados intentos. Esperá 30 segundos." : "Escribí tu PIN para entrar a los ajustes"}</p>
-        <div class="pindots ${L.shake ? "shake" : ""}" aria-label="${L.pin.length} de 4 números">${[0, 1, 2, 3].map((i) => `<i class="${i < L.pin.length ? "on" : ""}"></i>`).join("")}</div>
-        <div role="alert" class="err" style="margin:6px 0 0;min-height:22px">${esc(L.err || "")}</div>
-        <div class="pinpad">
-          ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<button data-act="pin" data-k="${n}" ${bloqueado ? "disabled" : ""}>${n}</button>`).join("")}
-          <button class="fn" data-act="loginBack">No soy yo</button>
-          <button data-act="pin" data-k="0" ${bloqueado ? "disabled" : ""}>0</button>
-          <button class="fn" data-act="pin" data-k="del" aria-label="Borrar">${ic("undo")}</button>
-        </div>
-      </div>`;
-  }
-  return `<div class="gate"><div class="gh"><img src="${LOGO_BLANCO}" alt="Gervital, Centro Diurno Gerontológico"><span class="app">${MARK}<b>ronda</b> · registro de medicación</span></div><div class="gb"><div class="panel">${body}</div></div></div>`;
+  const f = ui.form || {};
+  return vGate(`
+    <h1>Hola 👋</h1>
+    <p class="g-sub">Entrá con tu usuario.</p>
+    ${ui.loginMsg ? `<p class="g-msg">${esc(ui.loginMsg)}</p>` : ""}
+    <form data-submit="entrar" autocomplete="on">
+    <label class="fld"><input type="text" name="username" data-f="usuario" value="${esc(f.usuario || "")}" autocapitalize="off" autocomplete="username" spellcheck="false" placeholder=" "><span>Usuario</span></label>
+    <label class="fld"><input type="${ui.ver ? "text" : "password"}" name="password" data-f="pass" value="${esc(f.pass || "")}" autocomplete="current-password" placeholder=" "><span>Contraseña</span><button type="button" class="ojo" data-act="verPass" aria-label="Mostrar contraseña">${ic("eye", "s")}</button></label>
+    ${ui.loginErr ? `<p class="err">${esc(ui.loginErr)}</p>` : ""}
+    <button type="submit" class="btn block big" ${ui.ocupado ? "disabled" : ""}>${ui.ocupado ? "Entrando…" : "Entrar"}</button>
+    </form>
+    <p class="g-foot">¿No tenés usuario? Pedíselo a quien administra Ronda.</p>`);
 }
 
 /* ---------- Estructura con navegación ---------- */
 function vShell(content) {
   const pend = contarPendientes();
-  const tabBtn = (t, cls) => `<button class="${cls}" data-act="tab" data-tab="${t.id}" ${ui.tab === t.id ? 'aria-current="page"' : ""}>`;
+  const tabs = [...TABS, { id: "mas", t: "Yo", i: "user" }];
+  const tabBtn = (t, cls) => `<button class="${cls}" data-act="tab" data-tab="${t.id}" ${ui.tab === t.id && !ui.sub ? 'aria-current="page"' : ""}>`;
   const demo = Clock.offsetMin !== 0;
   return `
   <div class="shell">
     <aside class="side">
       ${marca("Gervital")}
-      <nav aria-label="Secciones">${TABS.map((t) => `${tabBtn(t, "nav")}${ic(t.i)}${t.t}${t.id === "hoy" && pend ? `<span class="badge">${pend}</span>` : ""}</button>`).join("")}${tabBtn({ id: "mas" }, "nav")}${ic("ajustes")}Mi cuenta y ajustes</button></nav>
+      <nav aria-label="Secciones">${tabs.map((t) => `${tabBtn(t, "nav")}${t.id === "mas" ? avatar(S.user, "xs") : ic(t.i)}${t.id === "mas" ? "Mi cuenta" : t.t}${t.id === "hoy" && pend ? `<span class="badge">${pend}</span>` : ""}</button>`).join("")}</nav>
       <div class="grow"></div>
-      <div class="reloj js-reloj ${demo ? "demo" : ""}" title="${demo ? "Hora de demostración" : "Hora actual"}"><span class="dot"></span><span class="js-hora">${nowHM()}</span></div>
-      <div class="yo">${avatar(S.user)}<div><b>${esc(S.user.nombre)}</b><span>${esc(S.user.rol || "")}</span></div><button data-act="logout" title="Cerrar sesión" aria-label="Cerrar sesión">${ic("logout")}</button></div>
+      <div class="reloj js-reloj ${demo ? "demo" : ""}"><span class="dot"></span><span class="js-hora">${nowHM()}</span></div>
     </aside>
     <div class="wrap">
-      <header class="topbar">
-        ${marca("Gervital")}
-        <div class="sp"></div>
-        <div class="reloj js-reloj ${demo ? "demo" : ""}"><span class="dot"></span><span class="js-hora">${nowHM()}</span></div>
-        <button class="me" data-act="tab" data-tab="mas" aria-label="Mi cuenta y ajustes" ${ui.tab === "mas" ? 'aria-current="page"' : ""}>${avatar(S.user, "sm")}${ic("ajustes", "s")}</button>
-      </header>
       <main class="page ${ui.tab === "hoy" && !ui.sub ? "" : "narrow"}" id="main">${content}</main>
     </div>
-    <nav class="tabs" aria-label="Secciones">${TABS.map((t) => `${tabBtn(t, "tab")}<span class="ico">${ic(t.i)}</span>${t.t}${t.id === "hoy" && pend ? `<span class="badge">${pend}</span>` : ""}</button>`).join("")}</nav>
+    <nav class="tabs" aria-label="Secciones">${tabs.map((t) => `${tabBtn(t, "tab")}<span class="ico">${t.id === "mas" ? avatar(S.user, "xs") : ic(t.i)}${t.id === "hoy" && pend ? `<span class="badge">${pend}</span>` : ""}</span>${t.t}</button>`).join("")}</nav>
   </div>`;
 }
 function contarPendientes() {
@@ -117,12 +71,23 @@ function contarPendientes() {
 }
 
 /* ---------- HOY ---------- */
-/* Un solo concepto: la ronda. Arriba se elige la ronda (pastillas con la hora),
-   abajo están las personas de esa ronda con lo que hay que darles. */
+/* Arriba, las rondas del día como círculos (como las historias de Instagram): violeta = toca ahora,
+   rojo = quedó algo sin dar, verde = lista. Abajo, la ronda elegida: cada persona con su medicación
+   y un botón redondo para marcarla como dada. */
 const PEND = ["pendiente", "pospuesta", "atrasada"];
 function rondaElegida(rondas, cur) {
   const sel = rondas.find((r) => r.hora === ui.ronda);
-  return sel || cur || rondas[0];
+  if (sel) return sel;
+  const min = nowMin();
+  return cur || rondas.find((r) => mins(r.hora) > min) || rondas[rondas.length - 1];
+}
+function estadoRonda(r, cur) {
+  const ests = r.items.map((t) => estado(t));
+  if (ests.every((e) => !PEND.includes(e) && e !== "proxima" && e !== "sinreg")) return "ok";
+  const pasada = cur ? mins(r.hora) < mins(cur.hora) : mins(r.hora) < nowMin();
+  if (pasada || ests.some((e) => e === "atrasada" || e === "sinreg")) return "falta";
+  if (r === cur) return "ahora";
+  return "prox";
 }
 
 function vHoy() {
@@ -131,85 +96,57 @@ function vHoy() {
   const rondas = rondasDe(iso);
   const min = nowMin();
   const cur = rondaActual(rondas);
-  const saludo = `<div class="hola"><div class="grow"><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1><p>${esc(fechaLarga(iso))}</p></div></div>`;
+  const top = `<header class="hoy-top"><div class="grow"><p class="fecha">${esc(fechaLarga(iso))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div><div class="reloj js-reloj ${Clock.offsetMin ? "demo" : ""}"><span class="dot"></span><span class="js-hora">${nowHM()}</span></div></header>`;
 
   if (!rondas.length) {
-    const vienen = S.personas.filter((p) => asisteEl(p, iso));
-    return `<div class="hoy">${saludo}
-      <div class="empty"><div>${MARK}</div><h3>${vienen.length ? "Hoy no hay medicación para dar" : "Hoy no viene nadie con medicación"}</h3><p>${vienen.length ? "Las personas que vienen hoy no tienen tomas en el centro, o avisaron que no vienen." : "Podés ver quién viene cada día en Personas."}</p></div>
+    return `<div class="hoy">${top}
+      <div class="vacio">${MARK}<h3>Hoy no hay medicación</h3></div>
       ${vNoVinieron(iso)}</div>`;
   }
 
   const foco = rondaElegida(rondas, cur);
+  const stories = `<div class="stories" role="tablist" aria-label="Rondas de hoy">${rondas.map((r) => {
+    const st = estadoRonda(r, cur);
+    const lab = st === "ok" ? "Lista" : st === "falta" ? "Falta" : st === "ahora" ? "Ahora" : r.hora < hm(min) ? "" : "Después";
+    return `<button role="tab" class="story ${st}" data-act="ronda" data-h="${r.hora}" aria-selected="${r === foco}"><span class="ring"><span class="in"><b class="num">${r.hora}</b></span>${st === "ok" ? `<span class="pip">${ic("check", "s")}</span>` : st === "falta" ? `<span class="pip">!</span>` : ""}</span><span class="lab">${lab}</span></button>`;
+  }).join("")}</div>`;
+
   const porPersona = agrupar(foco.items);
   const abiertas = porPersona.filter((g) => g.tomas.some((t) => abierta(estado(t)) || estado(t) === "sinreg"));
   const listas = porPersona.filter((g) => !abiertas.includes(g));
-  const pasada = (r) => cur && mins(r.hora) < mins(cur.hora);
-  const atrasadas = rondas.filter((r) => r !== foco && pasada(r) && r.items.some((t) => PEND.includes(estado(t)) || estado(t) === "sinreg"));
+  const d = mins(foco.hora) - min;
+  const temprano = d > 15 && foco.hechas === 0;
+  const pasada = cur ? mins(foco.hora) < mins(cur.hora) : d < 0;
+  const pct = foco.total ? Math.round((foco.hechas / foco.total) * 100) : 0;
+  const cuando = foco.hechas === foco.total ? "Completa" : temprano ? `En ${durTxt(d)}` : d > 0 ? "Ya se puede dar" : foco === cur ? (d === 0 ? "Es ahora" : `Hace ${durTxt(-d)}`) : `Quedó sin dar`;
+  const cab = `<section class="rcab ${foco.hechas === foco.total ? "ok" : pasada ? "falta" : ""}">
+      <div class="row"><div class="grow"><span class="k">Ronda de las</span><h2 class="num">${foco.hora}</h2></div><div class="cnt num"><b>${foco.hechas}</b>/${foco.total}</div></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="row sm"><span class="grow">${cuando}</span><span>${plural(foco.personas, "persona")}</span></div>
+    </section>`;
 
-  const pills = `<div class="rpills" role="tablist" aria-label="Rondas de hoy">${rondas.map((r) => {
-    const falta = r.items.some((t) => PEND.includes(estado(t)) || estado(t) === "sinreg") && pasada(r);
-    const lista = r.hechas === r.total;
-    return `<button role="tab" class="rpill ${falta ? "falta" : lista ? "ok" : ""} ${r === cur ? "ahora" : ""}" data-act="ronda" data-h="${r.hora}" aria-selected="${r === foco}"><span class="num">${r.hora}</span>${lista ? ic("check", "s") : falta ? ic("alert", "s") : r === cur ? "<i>ahora</i>" : ""}</button>`;
-  }).join("")}</div>`;
-
-  const next = rondas.find((r) => mins(r.hora) > mins(foco.hora));
   let lista = "";
-  const falta = mins(foco.hora) - min;
-  if (falta > 15 && abiertas.length === porPersona.length) {
-    lista += `<div class="aviso info" style="margin-top:14px">${ic("bell")}<div>Todavía no es la hora. A las ${foco.hora} suena la alarma y acá vas a poder registrar cada toma.</div></div>
-      <div class="section"><h2 class="h3">Quiénes toman a las ${foco.hora}</h2><span class="tag">${porPersona.length}</span></div>
-      <div class="list">${porPersona.map((g) => `<button class="li" data-act="ficha" data-pid="${g.p.id}">${avatar(g.p, "sm")}<span class="grow"><span class="t">${esc(g.p.nombre)}</span><span class="d" style="display:block">${g.tomas.map((t) => `${esc(t.m.nombre)} ${esc(t.m.dosis || "")}`).join(" · ")}</span></span>${ic("chevR", "s chev")}</button>`).join("")}</div>`;
-  } else if (abiertas.length) {
-    lista += `<div class="section"><h2 class="h3">${foco === cur || !cur ? "Para dar" : pasada(foco) ? "Quedaron sin dar" : "Para dar"}</h2><span class="tag">${abiertas.length}</span></div>`;
-    if (pasada(foco)) lista += `<p class="faint small" style="margin:-4px 0 12px">Al tocar “Se la di” te preguntamos a qué hora fue, para que quede la hora real.</p>`;
-    lista += abiertas.map((g) => vPCard(g, { prev: pasada(foco) })).join("");
-  } else {
-    lista += `<div class="done-msg"><span class="ic">${ic("check")}</span><div><b>Ronda de las ${foco.hora} completa</b><span>${next ? `La próxima es a las ${next.hora}.` : "No quedan más rondas hoy."}</span></div>${next ? `<button class="btn sec sm" data-act="ronda" data-h="${next.hora}">Ver ${next.hora}</button>` : ""}</div>`;
+  if (abiertas.length) lista += abiertas.map((g) => vPCard(g, { prev: pasada, temprano })).join("");
+  else {
+    const next = rondas.find((r) => mins(r.hora) > mins(foco.hora) && r.hechas < r.total);
+    lista += `<div class="listo"><span class="ic">${ic("check")}</span><b>¡Ronda completa!</b>${next ? `<button class="btn sec sm" data-act="ronda" data-h="${next.hora}">Ir a las ${next.hora}</button>` : ""}</div>`;
   }
   if (listas.length) {
-    lista += `<div class="section"><h2 class="h3">Ya registradas</h2><span class="tag ok">${listas.length}</span></div>
+    lista += `<div class="sec-t"><h3>Ya dadas</h3><span>${listas.length}</span></div>
       <div class="hechas">${listas.map((g) => {
-        const est = g.tomas.map((t) => estado(t));
-        const mix = est.some((e) => e === "nodada");
-        return `<button class="hecha" data-act="ficha" data-pid="${g.p.id}"><span class="ok ${mix ? "mix" : ""}">${ic(mix ? "nodio" : "check")}</span><span class="grow"><b>${esc(g.p.nombre)}</b><span class="faint small">${g.tomas.map((t) => esc(t.m.nombre)).join(", ")}</span></span><span class="faint xs num">${esc(g.tomas[0].r?.horaReal || "")}</span>${ic("chevR", "s chev")}</button>`;
+        const mix = g.tomas.some((t) => estado(t) === "nodada");
+        return `<button class="hecha" data-act="ficha" data-pid="${g.p.id}">${avatar(g.p, "sm")}<span class="grow"><b>${esc(g.p.nombre)}</b><span>${g.tomas.map((t) => esc(t.m.nombre)).join(", ")}</span></span><span class="ok ${mix ? "mix" : ""}">${ic(mix ? "nodio" : "check", "s")}</span></button>`;
       }).join("")}</div>`;
   }
-
-  const aviso = atrasadas.length ? `<button class="aviso warn tap linea" data-act="ronda" data-h="${atrasadas[0].hora}">${ic("alert", "s")}<span class="grow">Falta registrar ${atrasadas.map((r) => r.hora).join(" y ")}</span><b>Ver</b></button>` : "";
-
-  const otras = rondas.length > 1 ? `<div class="section"><h2 class="h3">Rondas de hoy</h2></div>${pills}` : "";
-  return `<div class="hoy">${saludo}${vHero(foco, cur, min)}${aviso}${lista}${vInvitaAvisos()}${otras}${vNoVinieron(iso)}</div>`;
+  return `<div class="hoy">${top}${stories}${cab}${lista}${vInvitaAvisos()}${vNoVinieron(iso)}</div>`;
 }
 
 function vInvitaAvisos() {
+  if (window.RONDA_NATIVA) return "";
   if (![...S.reg.values()].some((r) => r.por === S.user.id)) return "";
   if (!Nube.pushPosible || lsGet("ronda-avisos-no") || (lsGet("ronda-avisos") && Notification.permission === "granted")) return "";
   if (esIOS() && !instalada()) return "";
-  return `<button class="aviso info tap invita" data-act="sheet" data-s="avisos">${ic("bell")}<div class="grow"><b>Que la alarma suene con la app cerrada</b><p>Activalo una vez en este celular.</p></div>${ic("chevR", "s")}</button>`;
-}
-
-function vRespChip() {
-  const R = responsableHoy();
-  const nom = R.tipo === "persona" ? primerNombre(R.u.nombre) : R.tipo === "compartida" ? "Entre todos" : "Sin definir";
-  return `<button class="respchip" data-act="sheet" data-s="resp" aria-label="Responsable de hoy: ${esc(nom)}. Cambiar">${R.tipo === "persona" ? avatar(R.u, "sm") : `<span class="av sm" style="--c:var(--violeta)">${ic("equipo", "s")}</span>`}<span><small>Da la medicación</small>${esc(nom)}</span></button>`;
-}
-
-function vHero(foco, cur, min) {
-  const d = mins(foco.hora) - min;
-  let sub;
-  if (foco.hechas === foco.total) sub = "Todo registrado";
-  else if (d > 15) sub = `Empieza en ${durTxt(d)}`;
-  else if (d > 0) sub = `Empieza en ${durTxt(d)}, ya se puede dar`;
-  else if (d === 0) sub = "Es ahora";
-  else sub = foco === cur ? `Empezó hace ${durTxt(-d)}` : `Fue hace ${durTxt(-d)}`;
-  const pct = foco.total ? Math.round((foco.hechas / foco.total) * 100) : 0;
-  return `<section class="hero">
-    <div class="k">${foco === cur ? "Ahora toca la ronda de las" : "Ronda de las"}</div>
-    <div class="row top"><h1 class="num grow">${foco.hora}</h1><div class="cuenta num"><b>${foco.hechas}</b>/${foco.total}<span>tomas</span></div></div>
-    <div class="sub">${sub} · ${plural(foco.personas, "persona")}</div>
-    <div class="bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Tomas registradas"><i style="width:${pct}%"></i></div>
-  </section>`;
+  return `<button class="invita" data-act="sheet" data-s="avisos">${ic("bell")}<b class="grow">Activar la alarma con la app cerrada</b>${ic("chevR", "s")}</button>`;
 }
 
 function agrupar(tomas) {
@@ -218,53 +155,54 @@ function agrupar(tomas) {
   return [...m.values()];
 }
 
-function vPCard(g, { prev = false } = {}) {
+function vPCard(g, { prev = false, temprano = false } = {}) {
   const p = g.p;
-  const abiertas = g.tomas.filter((t) => abierta(estado(t)) || estado(t) === "sinreg");
-  const nadaDada = g.tomas.every((t) => !t.r || t.r.estado === "pospuesta");
   const esHoy = g.tomas[0].fecha === today();
-  return `<article class="pc ${prev ? "prev" : ""}">
+  const nadaDada = g.tomas.every((t) => !t.r || t.r.estado === "pospuesta");
+  const abiertas = g.tomas.filter((t) => abierta(estado(t)) || estado(t) === "sinreg");
+  return `<article class="pc2">
     <div class="hd">
-      <button class="who" data-act="ficha" data-pid="${p.id}" aria-label="Ver ficha de ${esc(p.nombre)}">${avatar(p)}<span class="grow"><span class="nm">${esc(p.nombre)}</span><span class="meta">Ver ficha ${ic("chevR", "s")}</span></span></button>
-      ${esHoy && nadaDada ? `<button class="btn line xs novino" data-act="ausencia" data-pid="${p.id}">${ic("ausente", "s")} No vino</button>` : ""}
+      <button class="who" data-act="ficha" data-pid="${p.id}">${avatar(p)}<span class="grow"><span class="nm">${esc(p.nombre)}</span>${p.alergias ? `<span class="alg">${ic("alert", "s")} Alergia: ${esc(p.alergias)}</span>` : p.notas ? `<span class="nt">${esc(p.notas.length > 60 ? p.notas.slice(0, 58) + "…" : p.notas)}</span>` : ""}</span></button>
+      ${esHoy && nadaDada ? `<button class="mini" data-act="ausencia" data-pid="${p.id}">No vino</button>` : ""}
     </div>
-    ${p.alergias ? `<div class="nota alergia">${ic("alert", "s")}<span>Alergia: ${esc(p.alergias)}</span></div>` : ""}
-    ${p.notas ? `<div class="nota">${ic("note", "s")}<span>${esc(p.notas.length > 110 ? p.notas.slice(0, 108) + "…" : p.notas)}</span></div>` : ""}
-    ${g.tomas.map((t) => vMedRow(t, prev)).join("")}
-    ${abiertas.length > 1 ? `<div class="ft"><button class="btn sec grow" data-act="darTodas" data-ids="${abiertas.map((t) => t.id).join(",")}" ${prev ? 'data-prev="1"' : ""}>${ic("check")} Le di las ${abiertas.length}</button></div>` : ""}
+    ${g.tomas.map((t) => vMedRow(t, prev, temprano)).join("")}
+    ${abiertas.length > 1 && !temprano ? `<button class="todas" data-act="darTodas" data-ids="${abiertas.map((t) => t.id).join(",")}" ${prev ? 'data-prev="1"' : ""}>${ic("check", "s")} Le di todas</button>` : ""}
   </article>`;
 }
 
-function vMedRow(t, prev) {
+function vMedRow(t, prev, temprano) {
   const e = estado(t);
   const open = abierta(e) || e === "sinreg";
   let tag = "";
-  if (e === "sinreg") tag = `<span class="tag bad">Sin registrar</span>`;
-  else if (e === "atrasada") tag = `<span class="tag sol">Atrasada ${durTxt(minutosTarde(t))}</span>`;
-  else if (e === "pospuesta") tag = `<span class="tag sol">Para las ${esc(t.r.posp)}</span>`;
-  const info = `<div class="grow"><div class="mn">${medTxt(t.m)}</div>${t.m.indicacion || tag ? `<div class="mi">${tag}${tag && t.m.indicacion ? " " : ""}${esc(t.m.indicacion || "")}</div>` : ""}${e === "nodada" && t.r?.motivo ? `<div class="mi">${esc(t.r.motivo)}</div>` : ""}</div>`;
-  if (open) return `<div class="med open"><div class="row">${info}</div>
-    <div class="acts"><button class="btn dar grow" data-act="dar" data-id="${t.id}" ${prev || e === "sinreg" ? 'data-prev="1"' : ""}>${ic("check")} Se la di</button><button class="btn line otra" data-act="sheet" data-s="otra" data-id="${t.id}">Otra opción</button></div></div>`;
-  return `<div class="med ${e === "dada" ? "done" : e === "nodada" ? "no" : ""}"><span class="pill">${ic(e === "dada" ? "check" : "nodio")}</span>${info}
-    <button class="reg" data-act="sheet" data-s="editreg" data-id="${t.id}" aria-label="Ver o corregir registro"><span class="st ${e}">${ESTADO_TXT[e]}</span><br>${t.r?.horaReal ? `<span class="num">${esc(t.r.horaReal)}</span> · ` : ""}${esc(primerNombre(staffNombre(t.r?.por)))}</button></div>`;
+  if (e === "sinreg") tag = `<span class="tg bad">Sin registrar</span>`;
+  else if (e === "atrasada") tag = `<span class="tg warn">Atrasada</span>`;
+  else if (e === "pospuesta") tag = `<span class="tg warn">A las ${esc(t.r.posp)}</span>`;
+  const info = `<span class="grow"><span class="mn">${medTxt(t.m)}</span>${tag || t.m.indicacion ? `<span class="mi">${tag}${esc(t.m.indicacion || "")}</span>` : ""}</span>`;
+  if (open) return `<div class="mr">
+      <button class="mr-info" data-act="sheet" data-s="otra" data-id="${t.id}" aria-label="Más opciones para ${esc(t.m.nombre)}">${info}<span class="mas3">${ic("mas", "s")}</span></button>
+      ${temprano ? "" : `<button class="dar2" data-act="dar" data-id="${t.id}" ${prev || e === "sinreg" ? 'data-prev="1"' : ""} aria-label="Se la di: ${esc(t.m.nombre)}">${ic("check")}</button>`}
+    </div>`;
+  return `<button class="mr done ${e === "nodada" ? "no" : ""}" data-act="sheet" data-s="editreg" data-id="${t.id}">
+      ${info}<span class="quien">${t.r?.horaReal ? `<span class="num">${esc(t.r.horaReal)}</span> · ` : ""}${esc(primerNombre(staffNombre(t.r?.por)))}</span><span class="hecho">${ic(e === "dada" ? "check" : "nodio", "s")}</span>
+    </button>`;
 }
 
 /* Quienes avisaron que no vienen hoy: se puede deshacer */
 function vNoVinieron(iso) {
   const no = S.personas.filter((p) => asisteEl(p, iso) && ausente(iso, p.id));
   if (!no.length) return "";
-  return `<div class="section"><h2 class="h3">No vinieron hoy</h2><span class="tag mute">${no.length}</span></div>
-    <div class="list">${no.map((p) => `<div class="li">${avatar(p, "sm")}<span class="grow"><span class="t">${esc(p.nombre)}</span><span class="d" style="display:block">Sus tomas de hoy no suenan</span></span><button class="btn line xs" data-act="ausencia" data-pid="${p.id}">Sí vino</button></div>`).join("")}</div>`;
+  return `<div class="sec-t"><h3>No vinieron</h3><span>${no.length}</span></div>
+    <div class="hechas">${no.map((p) => `<div class="hecha">${avatar(p, "sm")}<span class="grow"><b>${esc(p.nombre)}</b></span><button class="mini" data-act="ausencia" data-pid="${p.id}">Sí vino</button></div>`).join("")}</div>`;
 }
 
 function vSinPersonas() {
-  const cuid = S.staff.filter((u) => !u.admin && u.activo !== false).length;
-  return `<section class="hero"><div class="k">${esc(fechaLarga(today()))}</div><h1 style="font-size:32px">Dejemos todo listo</h1><div class="sub">Son dos pasos y se hacen una sola vez. Las alarmas se arman solas con los horarios de cada persona.</div></section>
-    <div class="opts" style="margin-top:18px">
-      <button class="opt" data-act="nuevaPersona"><span class="oi">1</span><span class="grow">Cargá a las personas<small>Nombre, días que viene y su medicación con horario.</small></span>${ic("chevR")}</button>
-      <button class="opt" data-act="sub" data-sub="equipo"><span class="oi ${cuid ? "" : "mute"}">${cuid ? ic("check") : "2"}</span><span class="grow">Sumá a las cuidadoras<small>${cuid ? plural(cuid, "cuidadora sumada", "cuidadoras sumadas") : "Solo su nombre. Entran tocándolo."}</small></span>${ic("chevR")}</button>
-    </div>
-    <button class="link" style="margin-top:14px" data-act="sub" data-sub="importar">Ya tengo la lista en una planilla</button>`;
+  const cuid = S.staff.filter((u) => u.id !== S.user.id && u.activo !== false).length;
+  return `<div class="hoy"><header class="hoy-top"><div class="grow"><p class="fecha">${esc(fechaLarga(today()))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div></header>
+    ${esAdmin() ? `<h2 class="h2" style="margin:8px 0 14px">Empecemos</h2>
+    <div class="pasos">
+      <button class="paso" data-act="nuevaPersona"><span class="n">1</span><span class="grow"><b>Agregar personas</b><small>Y su medicación con horario</small></span>${ic("chevR", "s")}</button>
+      <button class="paso" data-act="sub" data-sub="equipo"><span class="n ${cuid ? "ok" : ""}">${cuid ? ic("check", "s") : "2"}</span><span class="grow"><b>Crear usuarios del equipo</b><small>${cuid ? plural(cuid, "usuario creado", "usuarios creados") : "Usuario y contraseña para cada una"}</small></span>${ic("chevR", "s")}</button>
+    </div>` : `<div class="vacio">${MARK}<h3>Todavía no hay personas cargadas</h3></div>`}</div>`;
 }
 
 /* ---------- PERSONAS ---------- */
@@ -286,7 +224,7 @@ function vPersonas() {
     return `<p class="muted small" style="margin:0 0 12px">${DIA_NOMBRE[dia]}: ${plural(lista.length, "persona")}${hs.length ? ` · rondas a las ${hs.join(", ")}` : ""}</p>`;
   })() : "";
   return `
-    <div class="pagehead"><div><h1 class="h1">Personas</h1><p>${F.act ? "Quiénes toman medicación y qué días vienen." : "Personas dadas de baja. Su historial queda guardado."}</p></div><div class="sp"></div>${F.act ? `<button class="btn" data-act="nuevaPersona">${ic("plus")} Nueva</button>` : `<button class="btn line" data-act="pfAct" data-v="1">${ic("chevL", "s")} Volver</button>`}</div>
+    <div class="pagehead"><div><h1 class="h1">Personas</h1>${F.act ? "" : "<p>Dadas de baja</p>"}</div><div class="sp"></div>${F.act ? `<button class="btn" data-act="nuevaPersona">${ic("plus")} Nueva</button>` : `<button class="btn line" data-act="pfAct" data-v="1">${ic("chevL", "s")} Volver</button>`}</div>
     <div class="search">${ic("search")}<input type="search" placeholder="Buscar por nombre" data-pf="q" value="${esc(F.q || "")}" aria-label="Buscar persona"></div>
     ${F.act ? `<div class="dpills" role="group" aria-label="Qué día vienen"><button data-act="pfDia" data-n="" aria-pressed="${!dia}">Todas</button>${dias.map((d) => `<button data-act="pfDia" data-n="${d.n}" aria-pressed="${dia === d.n}">${d.k}${d.n === hoyN ? "<i>hoy</i>" : ""}</button>`).join("")}</div>${resumenDia}` : ""}
     ${lista.length ? `<div class="list">${lista.map((p) => {
@@ -368,7 +306,7 @@ function vHistorial() {
   const fechas = [...new Set(items.map((x) => x.fecha))].sort().reverse();
   const personasOpt = S.personas.map((p) => `<option value="${p.id}" ${H.pid === p.id ? "selected" : ""}>${esc(p.nombre)}</option>`).join("");
   return `
-    <div class="pagehead"><div><h1 class="h1">Historial</h1><p>Cada toma registrada, quién la dio y a qué hora.</p></div><div class="sp"></div><button class="btn line sm" data-act="exportCSV">${ic("download", "s")} Descargar</button></div>
+    <div class="pagehead"><div><h1 class="h1">Historial</h1></div><div class="sp"></div><button class="btn line sm" data-act="exportCSV">${ic("download", "s")} Descargar</button></div>
     <div class="filtros">
       <div class="seg" role="group" aria-label="Período">${[["hoy", "Hoy"], ["7", "7 días"], ["30", "30 días"]].map(([v, t]) => `<button data-act="hf" data-k="rango" data-v="${v}" aria-pressed="${H.rango === v}">${t}</button>`).join("")}</div>
       <select data-hf="pid" aria-label="Persona"><option value="">Todas las personas</option>${personasOpt}</select>
@@ -389,43 +327,36 @@ function vHistorial() {
     }).join("") : `<div class="empty"><div>${MARK}</div><h3>No hay registros en este período</h3><p>Cuando registren tomas en Hoy, van a aparecer acá.</p></div>`}`;
 }
 
-/* ---------- MÁS ---------- */
+/* ---------- YO (cuenta y ajustes) ---------- */
 function vMas() {
   const u = S.user;
   const li = (act, icon, t, d, extra = "", cls = "") => `<button class="li" data-act="${act}" ${extra}><span class="ic ${cls}">${ic(icon)}</span><span class="grow"><span class="t">${t}</span>${d ? `<span class="d" style="display:block">${d}</span>` : ""}</span>${ic("chevR", "s chev")}</button>`;
+  const nativa = !!window.RONDA_NATIVA;
   return `
-    <div class="subhead"><button class="iconbtn" data-act="tab" data-tab="hoy" aria-label="Volver a Hoy">${ic("chevL")}</button><h1 class="h2">Mi cuenta y ajustes</h1></div>
-    <div class="card pad row" style="margin-bottom:22px">${avatar(u, "lg")}<div class="grow"><div class="h3">${esc(u.nombre)}</div><div class="muted small">${u.admin ? "Administra la app" : "Cuidadora"}</div></div><button class="btn line sm" data-act="logout">${ic("logout", "s")} Salir</button></div>
-    ${u.admin ? `<div class="grupo"><span class="eyebrow">Centro</span><div class="list">
-      ${li("sub", "equipo", "Cuidadoras", "Quiénes aparecen al abrir la app", 'data-sub="equipo"')}
-      ${li("sub", "ajustes", "Alarmas y tiempos", `Atrasada a los ${S.cfg.margen} min · sin registrar a las ${durTxt(S.cfg.limite)}`, 'data-sub="ajustes"')}
-    </div></div>` : `<div class="grupo"><span class="eyebrow">Alarmas</span><div class="list">${li("sub", "sound", "Sonido y avisos", S.cfg.sonido ? "Sonido activado" : "Sonido apagado", 'data-sub="ajustes"')}</div></div>`}
-    ${Nube.disponible ? `<div class="grupo"><span class="eyebrow">Varios celulares</span><div class="list">
-      ${li("sheet", "phone", "Usar en varios celulares", Nube.activa ? (Nube.estado === "sinred" ? "Conectado · sin internet ahora, se guarda y sube después" : Nube.estado === "error" ? "Conectado · hubo un problema al sincronizar" : `Conectado${Nube.ultima ? ` · al día a las ${hm(new Date(Nube.ultima).getHours() * 60 + new Date(Nube.ultima).getMinutes())}` : ""}`) : "Todos ven las mismas personas y registros", 'data-s="nube"', Nube.activa ? "ok" : "")}
-      ${li("sheet", "bell", "Alarma con la app cerrada", lsGet("ronda-avisos") && typeof Notification !== "undefined" && Notification.permission === "granted" ? "Activada en este celular" : "Para que suene aunque no tengas la app abierta", 'data-s="avisos"')}
-    </div></div>` : ""}
-    <div class="grupo"><span class="eyebrow">Datos</span><div class="list">
-      ${li("sub", "sheet", "Importar planilla", "Cargar personas y medicación desde un CSV", 'data-sub="importar"')}
-      ${li("backup", "download", "Hacer copia de seguridad", kvGet("ultimaCopia") ? `Última: ${tsTexto(kvGet("ultimaCopia"))}` : "Todavía no hiciste ninguna")}
-      ${u.admin ? li("restoreAsk", "upload", "Restaurar una copia", "Reemplaza los datos de este dispositivo") : ""}
+    <div class="perfil">${avatar(u, "xl")}<h1>${esc(u.nombre)}</h1><p>@${esc(u.usuario || "")} · ${u.admin ? "Administra" : "Equipo"}</p></div>
+    ${u.admin ? `<div class="grupo"><div class="list">
+      ${li("sub", "equipo", "Usuarios del equipo", plural(S.staff.filter((x) => x.activo !== false).length, "usuario"), 'data-sub="equipo"')}
+      ${li("sub", "ajustes", "Alarma y tiempos", "", 'data-sub="ajustes"')}
+      ${li("sub", "sheet", "Importar planilla", "", 'data-sub="importar"')}
+    </div></div>` : `<div class="grupo"><div class="list">${li("sub", "sound", "Sonido de la alarma", S.cfg.sonido ? "Activado" : "Apagado", 'data-sub="ajustes"')}</div></div>`}
+    <div class="grupo"><div class="list">
+      ${li("sheet", "bell", "Probar la alarma", "", 'data-s="probar"')}
+      ${!nativa && Nube.disponible ? li("sheet", "bell", "Alarma con la app cerrada", lsGet("ronda-avisos") && typeof Notification !== "undefined" && Notification.permission === "granted" ? "Activada" : "Desactivada", 'data-s="avisos"') : ""}
+      ${!nativa ? li("sheet", "install", "Instalar en este celular", "", 'data-s="install"') : ""}
+      ${li("sheet", "key", "Cambiar mi contraseña", "", 'data-s="pin"')}
     </div></div>
-    <div class="grupo"><span class="eyebrow">Esta app</span><div class="list">
-      ${li("sheet", "install", "Instalar en este dispositivo", "Para abrirla como una app, sin navegador", 'data-s="install"')}
-      ${li("sheet", "bell", "Probar la alarma", "Escuchá cómo suena cada aviso", 'data-s="probar"')}
-      ${li("sheet", "key", "Cambiar mi PIN", "", 'data-s="pin"')}
-    </div></div>
-    <p class="faint xs" style="text-align:center;margin-top:24px">Ronda 1.3 · Gervital Centro Diurno Gerontológico<br>${DB.enMemoria ? "Atención: este navegador no permite guardar datos. Se pierden al cerrar." : "Los datos se guardan en este dispositivo."}</p>`;
+    <button class="btn line block" data-act="logout">${ic("logout", "s")} Cerrar sesión</button>
+    <p class="faint xs" style="text-align:center;margin-top:20px">Ronda 2.0 · Gervital${Nube.estado === "sinred" ? " · sin internet, se guarda y sube después" : ""}</p>`;
 }
 
-/* Equipo */
+/* Usuarios del equipo */
 function vEquipo() {
-  const R = S.cfg.responsableHabitual;
+  const act = S.staff.filter((u) => u.activo !== false), ina = S.staff.filter((u) => u.activo === false);
+  const fila = (u) => `<button class="li" data-act="sheet" data-s="miembro" data-uid="${u.id}">${avatar(u)}<span class="grow"><span class="t">${esc(u.nombre)}${u.id === S.user.id ? " (vos)" : ""}</span><span class="d" style="display:block">@${esc(u.usuario || "sin usuario")}${u.admin ? " · Administra" : ""}</span></span>${ic("chevR", "s chev")}</button>`;
   return `
-    <div class="subhead"><button class="iconbtn" data-act="back" aria-label="Volver">${ic("chevL")}</button><h1 class="h2">Cuidadoras</h1><button class="btn sm" data-act="sheet" data-s="miembro">${ic("plus", "s")} Sumar</button></div>
-    <p class="muted" style="margin-top:-6px">Aparecen al abrir la app. Cada una toca su nombre y así queda guardado quién dio cada toma.</p>
-    <div class="list">${S.staff.map((u) => `
-      <button class="li" data-act="sheet" data-s="miembro" data-uid="${u.id}">${avatar(u)}<span class="grow"><span class="t">${esc(u.nombre)}${u.id === S.user.id ? " (vos)" : ""}</span><span class="d" style="display:block">${esc(u.rol || "")}</span>
-      <span class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">${u.admin ? '<span class="tag">Administra</span>' : ""}${u.activo === false ? '<span class="tag mute">Sin acceso</span>' : ""}</span></span>${ic("chevR", "s chev")}</button>`).join("")}</div>`;
+    <div class="subhead"><button class="iconbtn" data-act="back" aria-label="Volver">${ic("chevL")}</button><h1 class="h2">Usuarios</h1><button class="btn sm" data-act="sheet" data-s="miembro">${ic("plus", "s")} Nuevo</button></div>
+    <div class="list">${act.map(fila).join("")}</div>
+    ${ina.length ? `<div class="sec-t" style="margin-top:22px"><h3>Sin acceso</h3><span>${ina.length}</span></div><div class="list">${ina.map(fila).join("")}</div>` : ""}`;
 }
 
 /* Ajustes */
@@ -451,14 +382,13 @@ function vAjustes() {
       ${step("margen", "Atrasada", "Desde cuándo una toma se marca como atrasada y suena el aviso.", 5, 10, 90, (v) => `${v} min`)}
       <hr class="divider" style="margin:0">
       ${step("limite", "Sin registrar", "Desde cuándo una toma que no se registró queda así en el historial.", 15, 60, 300, durTxt)}
-      <hr class="divider" style="margin:0">
-      ${step("autoLogout", "Cerrar sesión sola", "Después de este tiempo sin usar la app, hay que volver a poner el PIN.", 1, 1, 30, (v) => `${v} min`)}
+
     </div><p class="faint xs" style="margin:8px 4px 0">Conviene validar estos tiempos con enfermería.</p></div>
     <div class="grupo"><span class="eyebrow">Presentación</span><div class="card pad">
       <div class="row top"><div class="grow"><b>Reloj de demostración</b><div class="muted small">Para mostrar la app en otro horario. Las alarmas y los estados siguen esta hora.</div></div></div>
       <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">${["09:00", "12:55", "13:40", "16:00"].map((h) => `<button class="btn line xs" data-act="demoHora" data-h="${h}">${h}</button>`).join("")}${Clock.offsetMin ? `<button class="btn sol xs" data-act="demoHora" data-h="">Volver a la hora real</button>` : ""}</div>
     </div></div>
-    <div class="grupo"><span class="eyebrow">Datos</span><div class="list"><button class="li" data-act="sheet" data-s="borrar"><span class="ic bad">${ic("trash")}</span><span class="grow"><span class="t">Borrar todos los datos</span><span class="d" style="display:block">Para empezar de cero en este dispositivo</span></span>${ic("chevR", "s chev")}</button></div></div>` : ""}`;
+` : ""}`;
 }
 
 /* Importar planilla */
@@ -508,8 +438,8 @@ function vSheet() {
     case "otra":
       title = tname; sub = `Toma de las ${T.hora}`;
       body = `<div class="opts">
-        <button class="opt" data-act="sheet" data-s="nodio" data-id="${T.id}"><span class="oi bad">${ic("nodio")}</span><span class="grow">No se la dio<small>Elegís el motivo</small></span>${ic("chevR")}</button>
-        <button class="opt" data-act="sheet" data-s="cuando" data-id="${T.id}"><span class="oi">${ic("clock")}</span><span class="grow">Se la di a otra hora<small>Para anotar la hora real</small></span>${ic("chevR")}</button>
+        <button class="opt" data-act="sheet" data-s="nodio" data-id="${T.id}"><span class="oi bad">${ic("nodio")}</span><span class="grow">No se la dio</span>${ic("chevR")}</button>
+        <button class="opt" data-act="sheet" data-s="cuando" data-id="${T.id}"><span class="oi">${ic("clock")}</span><span class="grow">Se la di a otra hora</span>${ic("chevR")}</button>
         ${T.fecha === today() && estado(T) !== "sinreg" ? `<div class="eyebrow" style="margin:12px 4px 2px">Darla más tarde</div>
         <div class="timepick" style="grid-template-columns:repeat(3,1fr)">${[15, 30, 60].map((n) => `<button class="opt" style="justify-content:center" data-act="posponer" data-id="${T.id}" data-n="${n}">${n === 60 ? "1 hora" : n + " min"}</button>`).join("")}</div>` : ""}
       </div>`;
@@ -576,20 +506,30 @@ function vSheet() {
     }
     case "miembro": {
       const u = f.u;
-      title = u._nuevo ? "Sumar una cuidadora" : u.nombre;
+      title = u._nuevo ? "Nuevo usuario" : u.nombre;
       body = `
-        <label class="field"><span>Nombre</span><input type="text" data-fu="nombre" value="${esc(u.nombre)}" placeholder="Ej.: Lucía"></label>
-        ${u._nuevo ? `<p class="muted small">Va a aparecer al abrir la app. Entra tocando su nombre.</p>` : u.id === S.user.id ? "" : `<button class="switch" data-act="uToggle" data-k="activo" role="switch" aria-checked="${u.activo !== false}"><span class="grow"><b>Sigue en el centro</b><span>Si lo apagás, deja de aparecer al entrar. Lo que registró se guarda.</span></span><span class="sw"></span></button>`}
+        <label class="field"><span>Nombre</span><input type="text" data-fu="nombre" value="${esc(u.nombre)}" placeholder="Ej.: Lucía Gómez"></label>
+        <label class="field"><span>Usuario</span><input type="text" data-fu="usuario" value="${esc(u.usuario || "")}" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Ej.: lucia"></label>
+        <label class="field"><span>${u._nuevo ? "Contraseña" : "Contraseña nueva (opcional)"}</span><input type="text" data-fu="pass" value="${esc(u.pass || "")}" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="${u._nuevo ? "Mínimo 4 caracteres" : "Dejala vacía para no cambiarla"}"></label>
+        ${u.id === S.user.id ? "" : `<button class="switch" data-act="uToggle" data-k="admin" role="switch" aria-checked="${!!u.admin}"><span class="grow"><b>Administra</b><span>Puede crear usuarios y cambiar ajustes</span></span><span class="sw"></span></button>`}
+        ${u._nuevo || u.id === S.user.id ? "" : `<button class="switch" data-act="uToggle" data-k="activo" role="switch" aria-checked="${u.activo !== false}"><span class="grow"><b>Tiene acceso</b><span>Si lo apagás, no puede entrar</span></span><span class="sw"></span></button>`}
         ${ui.uErr ? `<p class="err">${esc(ui.uErr)}</p>` : ""}`;
-      acts = `<button class="btn line" data-act="closeSheet">Cancelar</button><button class="btn" data-act="guardarMiembro">Guardar</button>`;
+      acts = `<button class="btn line" data-act="closeSheet">Cancelar</button><button class="btn" data-act="guardarMiembro" ${ui.ocupado ? "disabled" : ""}>${ui.ocupado ? "Guardando…" : "Guardar"}</button>`;
+      break;
+    }
+    case "creado": {
+      const u = f.creado;
+      title = "Usuario creado"; sub = `Pasale estos datos a ${primerNombre(u.nombre)}:`;
+      body = `<div class="cred"><div><span>Usuario</span><b>${esc(u.usuario)}</b></div><div><span>Contraseña</span><b>${esc(u.pass)}</b></div></div>`;
+      acts = `<button class="btn line" data-act="credCompartir">${ic("phone", "s")} Compartir</button><button class="btn" data-act="closeSheet">Listo</button>`;
       break;
     }
     case "pin":
-      title = S.user.cambiarPin ? "Elegí tu PIN" : "Cambiar mi PIN"; sub = S.user.cambiarPin ? "Es la primera vez que entrás: elegí un PIN que solo sepas vos." : "";
-      body = `${S.user.cambiarPin ? "" : `<label class="field"><span>PIN actual</span><input type="password" inputmode="numeric" maxlength="4" data-f="actual" value="${esc(f.actual || "")}"></label>`}
-        <div class="row" style="gap:10px"><label class="field grow"><span>PIN nuevo</span><input type="password" inputmode="numeric" maxlength="4" data-f="nuevo" value="${esc(f.nuevo || "")}"></label><label class="field grow"><span>Repetilo</span><input type="password" inputmode="numeric" maxlength="4" data-f="nuevo2" value="${esc(f.nuevo2 || "")}"></label></div>
+      title = "Cambiar mi contraseña";
+      body = `<label class="field"><span>Contraseña actual</span><input type="password" data-f="actual" value="${esc(f.actual || "")}" autocomplete="current-password"></label>
+        <label class="field"><span>Contraseña nueva</span><input type="password" data-f="nuevo" value="${esc(f.nuevo || "")}" autocomplete="new-password"></label>
         ${ui.pinErr ? `<p class="err">${esc(ui.pinErr)}</p>` : ""}`;
-      acts = `${S.user.cambiarPin ? "" : `<button class="btn line" data-act="closeSheet">Cancelar</button>`}<button class="btn" data-act="guardarPin">Guardar PIN</button>`;
+      acts = `<button class="btn line" data-act="closeSheet">Cancelar</button><button class="btn" data-act="guardarPin" ${ui.ocupado ? "disabled" : ""}>Guardar</button>`;
       break;
     case "install": {
       const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
