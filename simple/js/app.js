@@ -184,6 +184,8 @@ const A = {
   scrim(d, el, ev) { if (ev.target === el) A.closeSheet(); },
   fSet(d) { ui.form[d.k] = d.v; },
   ronda(d) { ui.ronda = d.h; toTop(); },
+  verRonda(d) { ui.abierta = ui.abierta === d.h ? null : d.h; },
+  verDadas() { ui.verDadas = !ui.verDadas; },
   pfAct(d) { ui.pf.act = d.v === "1"; toTop(); },
   pfDia(d) { ui.pf.dia = d.n ? +d.n : null; },
   hf(d) { ui.hf[d.k] = d.v; },
