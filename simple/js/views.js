@@ -84,31 +84,10 @@ function vHoy() {
   const min = nowMin();
   const top = `<header class="hoy-top"><div class="grow"><p class="fecha">${esc(fechaLarga(iso))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div><div class="reloj js-reloj ${Clock.offsetMin ? "demo" : ""}"><span class="dot"></span><span class="js-hora">${nowHM()}</span></div></header>`;
   if (!rondas.length) return `<div class="hoy">${top}<div class="vacio">${MARK}<h3>Hoy no hay medicación</h3></div>${vNoVinieron(iso)}</div>`;
-  return (ui.hoyVariante === "A" ? vHoyAgenda : vHoyUrgencia)(rondas, min, top, iso);
+  return vHoyAgenda(rondas, min, top, iso);
 }
 
-/* Opción B: por urgencia */
-function vHoyUrgencia(rondas, min, top, iso) {
-  const todas = rondas.flatMap((r) => r.items);
-  const atras = todas.filter((t) => ["atrasada", "sinreg"].includes(estado(t)));
-  const ahora = todas.filter((t) => { const e = estado(t); return e === "pendiente" || e === "pospuesta" || (e === "proxima" && mins(t.hora) - 15 <= min); });
-  const luego = rondas.filter((r) => mins(r.hora) - 15 > min).map((r) => ({ r, n: r.items.filter((t) => estado(t) === "proxima").length })).filter((x) => x.n);
-  const dadas = todas.filter((t) => !abiertaT(t) && estado(t) !== "ausente");
-  const total = todas.filter((t) => estado(t) !== "ausente").length;
-
-  const resumen = atras.length + ahora.length
-    ? `<section class="res ${atras.length ? "bad" : ""}"><b class="num">${atras.length + ahora.length}</b><span>${atras.length + ahora.length === 1 ? "toma para dar" : "tomas para dar"}${atras.length ? `<small>${atras.length} atrasada${atras.length === 1 ? "" : "s"}</small>` : ""}</span></section>`
-    : `<section class="res ok"><span class="ic">${ic("check")}</span><span>${luego.length ? `Todo al día<small>Próxima ronda a las ${luego[0].r.hora}</small>` : "Todo dado por hoy"}</span></section>`;
-
-  let h = top + resumen;
-  if (atras.length) h += `<div class="sec-t bad"><h3>Atrasadas</h3><span>${atras.length}</span></div><div class="tomas">${atras.map((t) => vToma(t, true)).join("")}</div>`;
-  if (ahora.length) h += `<div class="sec-t"><h3>Ahora</h3><span>${ahora.length}</span></div><div class="tomas">${ahora.map((t) => vToma(t)).join("")}</div>`;
-  if (luego.length) h += `<div class="sec-t"><h3>Más tarde</h3></div><div class="tomas">${luego.map(({ r, n }) => `<button class="luego" data-act="verRonda" data-h="${r.hora}"><b class="num">${r.hora}</b><span class="grow">${plural(n, "toma")} · ${plural(new Set(r.items.filter(abiertaT).map((t) => t.p.id)).size, "persona")}</span>${ic(ui.abierta === r.hora ? "chevU" : "chevD", "s")}</button>${ui.abierta === r.hora ? r.items.filter(abiertaT).map((t) => vToma(t, false, true)).join("") : ""}`).join("")}</div>`;
-  if (dadas.length) h += `<button class="sec-t tap" data-act="verDadas"><h3>Ya dadas hoy</h3><span>${dadas.length} de ${total}</span><span class="grow"></span>${ic(ui.verDadas ? "chevU" : "chevD", "s")}</button>${ui.verDadas ? `<div class="tomas">${dadas.map((t) => vToma(t)).join("")}</div>` : ""}`;
-  return `<div class="hoy">${h}${vInvitaAvisos()}${vNoVinieron(iso)}</div>`;
-}
-
-/* Opción A: agenda por horario */
+/* Agenda por horario: cada ronda es un bloque; la de ahora y las atrasadas abiertas */
 function vHoyAgenda(rondas, min, top, iso) {
   const cur = rondaActual(rondas);
   let h = top;
@@ -116,10 +95,10 @@ function vHoyAgenda(rondas, min, top, iso) {
     const abiertas = r.items.filter(abiertaT);
     const pasada = mins(r.hora) + 15 < min;
     const st = !abiertas.length ? "ok" : pasada && r !== cur ? "bad" : mins(r.hora) - 15 <= min ? "now" : "prox";
-    const abierta = ui.abierta ? ui.abierta === r.hora : st === "now" || st === "bad";
+    const def = st === "now" || st === "bad"; const abierta = ui.ag && r.hora in ui.ag ? ui.ag[r.hora] : def;
     const chip = st === "ok" ? `<span class="chip ok">${ic("check", "s")} Lista</span>` : st === "bad" ? `<span class="chip bad">Faltan ${abiertas.length}</span>` : st === "now" ? `<span class="chip now">Ahora · ${abiertas.length}</span>` : `<span class="chip">${plural(abiertas.length, "toma")}</span>`;
     return `<section class="ag ${st} ${abierta ? "open" : ""}">
-      <button class="ag-h" data-act="verRonda" data-h="${r.hora}"><span class="dot"></span><b class="num">${r.hora}</b>${chip}<span class="grow"></span>${ic(abierta ? "chevU" : "chevD", "s")}</button>
+      <button class="ag-h" data-act="verRonda" data-h="${r.hora}" data-def="${def ? 1 : ""}" aria-expanded="${abierta}"><span class="dot"></span><b class="num">${r.hora}</b>${chip}<span class="grow"></span>${ic(abierta ? "chevU" : "chevD", "s")}</button>
       ${abierta ? `<div class="tomas">${r.items.filter((t) => estado(t) !== "ausente").map((t) => vToma(t, st === "bad", st === "prox")).join("")}</div>` : ""}
     </section>`;
   }).join("")}</div>`;
