@@ -48,6 +48,11 @@ async function unaVez(centro: string, clave: string) {
   return !error;
 }
 
+async function yaSono(centro: string, prefijo: string) {
+  const { count } = await sb.from("avisos_enviados").select("clave", { count: "exact", head: true }).eq("centro", centro).like("clave", `${prefijo}%`);
+  return (count || 0) > 1;
+}
+
 async function revisarCentro(centro: string, t: ReturnType<typeof ahora>) {
   const { data: docs, error } = await sb.from("docs").select("tienda,id,data").eq("centro", centro).eq("borrado", false).in("tienda", ["personas", "meds", "ausencias", "kv"]);
   if (error) throw error;
@@ -68,11 +73,13 @@ async function revisarCentro(centro: string, t: ReturnType<typeof ahora>) {
   let enviados = 0;
   for (const [hora, tomas] of rondas) {
     const t0 = mins(hora);
-    const quienes = [...new Set(tomas.map((x) => x.quien))];
-    if (t.min >= t0 && t.min < t0 + VENTANA && await unaVez(centro, `${t.iso}|${hora}|ronda`)) {
-      enviados += await enviar(centro, { titulo: `Ronda de las ${hora}`, cuerpo: `${plural(quienes.length, "persona")}: ${quienes.join(", ")}`, tag: `ronda-${hora}` });
-    }
     const faltan = tomas.filter((x) => !["dada", "nodada"].includes(reg.get(x.id)?.estado));
+    // Insistente: vuelve a sonar cada minuto mientras falte registrar algo (tope: VENTANA minutos)
+    if (faltan.length && t.min >= t0 && t.min < t0 + VENTANA && await unaVez(centro, `${t.iso}|${hora}|ronda|${t.min}`)) {
+      const primera = t.min === t0 || !(await yaSono(centro, `${t.iso}|${hora}|ronda|`));
+      const fq = [...new Set(faltan.map((x) => x.quien))];
+      enviados += await enviar(centro, { titulo: primera ? `Ronda de las ${hora}` : `⏰ Ronda de las ${hora} · sin dar`, cuerpo: `${plural(fq.length, "persona")}: ${fq.join(", ")}`, tag: `ronda-${hora}` });
+    }
     if (faltan.length && t.min >= t0 + margen && t.min < t0 + margen + VENTANA && await unaVez(centro, `${t.iso}|${hora}|atraso`)) {
       enviados += await enviar(centro, { titulo: `Quedan tomas sin dar`, cuerpo: `${plural(faltan.length, "toma")} de la ronda de las ${hora}: ${[...new Set(faltan.map((x) => x.quien))].join(", ")}`, tag: `atraso-${hora}` });
     }
@@ -99,7 +106,11 @@ Deno.serve(async (req) => {
       const { data: centro } = await sb.rpc("ronda_centro", { p_clave: String(body.clave || "") });
       if (!centro) return json({ error: "centro" }, 403);
       await new Promise((r) => setTimeout(r, Math.min(Number(body.espera) || 0, 20) * 1000));
-      const n = await enviar(centro, { titulo: "Prueba de alarma", cuerpo: "Así te va a llegar el aviso de cada ronda, aunque la app esté cerrada.", tag: "prueba" });
+      let n = 0;
+      for (let i = 0; i < 3; i++) {
+        if (i) await new Promise((r) => setTimeout(r, 15000));
+        n = await enviar(centro, { titulo: i ? "⏰ Prueba de alarma · sigue sonando" : "Prueba de alarma", cuerpo: "Así suena cada ronda: se repite cada minuto hasta que alguien la marca como dada.", tag: "prueba" });
+      }
       return json({ enviados: n });
     }
 
