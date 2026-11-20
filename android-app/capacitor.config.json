@@ -1,0 +1,6 @@
+{
+  "appId": "uy.gervital.ronda",
+  "appName": "Ronda",
+  "webDir": "www",
+  "android": { "backgroundColor": "#86428F" }
+}
