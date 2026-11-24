@@ -211,9 +211,14 @@ const A = {
   darTodas(d) {
     const ids = d.ids.split(",");
     if (d.prev) { const t = tomaPorId(ids[0]); ui.form = { horaReal: "", ids }; openSheet("cuando", { id: ids[0], ids }); return; }
+    openSheet("confirmar", { id: ids[0], ids, tipo: "dar" });
+  },
+  darTodasOk() {
+    const ids = ui.sheet.ids;
     ids.forEach((id, i) => darToma(id, null, i > 0)); marcarRecien(ids);
     const t = tomaPorId(ids[0]);
-    toast(`Listo: ${primerNombre(t.p.nombre)} tomó ${ids.length > 1 ? plural(ids.length, "medicamento") : t.m.nombre} a las ${nowHM()}`, true);
+    ui.sheet = null;
+    toast(`Listo: ${primerNombre(t.p.nombre)} tomó ${ids.length > 1 ? plural(ids.length, "medicamento") : t.m.nombre} a las ${nowHM()}`);
   },
   guardarCuando(d) {
     const h = normHora(ui.form.horaReal); if (!h) return;
@@ -257,9 +262,10 @@ const A = {
   undo() { if (undo()) { ui.toast = null; clearTimeout(toastTimer); toast("Se deshizo el cambio"); } },
   ausencia(d) {
     const p = persona(d.pid); const iso = today(); const on = !ausente(iso, p.id);
+    if (on && !d.ok) { openSheet("confirmar", { pid: p.id, tipo: "novino" }); return; }
     setAusencia(iso, p.id, on);
     ui.sheet = null;
-    toast(on ? `${primerNombre(p.nombre)}: no vino hoy` : `${primerNombre(p.nombre)} sí vino hoy`, true);
+    toast(on ? `Anotado: ${primerNombre(p.nombre)} no vino hoy` : `${primerNombre(p.nombre)} sí vino hoy`);
   },
   setResp(d) {
     kvSet("resp-" + today(), d.v);

@@ -1126,3 +1126,25 @@ html.w980 .hoy::before { left: -36px; right: -36px; top: -28px; }
 .semdia.hoy b::after { background: var(--noche); }
 .gate2 { background: var(--noche); }
 .hero { background-image: none; }
+
+/* Ronda 3.4 · por dar amarillo, atrasada rojo, no la tomó en rojo suave; confirmación */
+:root { --coral: #FCD9D2; --coral-2: #F6B4A6; --rojo: #C2381F; }
+.pc.tarde .pc-tag { background: var(--rojo); }
+.pc.falta { background: linear-gradient(160deg, #FFFAEA 0%, var(--amar) 100%); }
+.pc.falta .pc-tag { background: rgba(243, 193, 27, .35); }
+.pc.falta .pc-acts { display: flex; justify-content: flex-start; }
+.pc.nolatomo { background: #FBEDEA; box-shadow: none; padding-bottom: 6px; }
+.pc.nolatomo .md { padding: 8px 2px; }
+.pc.nolatomo .pc-nota { display: none; }
+.pc-tag.no { background: transparent; color: var(--rojo); box-shadow: inset 0 0 0 1.5px currentColor; }
+.pc.nolatomo .md-st.nodada, .md-st.nodada { color: var(--rojo); }
+.pc.nolatomo .md-n b, .pc.nolatomo .md-n span { color: var(--ink-2); }
+.ag.ok.conno .ag-tx { color: var(--rojo); }
+.ag.bad .ag-h .ag-hora, .ag.bad .ag-tx { color: var(--rojo); }
+.conf { display: flex; align-items: center; gap: 14px; padding: 6px 0 4px; }
+.conf b { font-size: 20px; font-weight: 500; }
+.conf-l { list-style: none; margin: 10px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.conf-l li { padding: 12px 2px; border-bottom: 1px solid var(--line); font-size: 18px; }
+.conf-l li b { font-weight: 500; }
+.btn.rojo { background: var(--rojo); color: #fff; }
+.pc.falta .a2 { padding: 0 22px; min-height: 48px; border-radius: 999px; background: rgba(255, 255, 255, .8); }

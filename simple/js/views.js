@@ -115,10 +115,11 @@ function vHoyAgenda(rondas, min, top, iso) {
     const pasada = mins(r.hora) + 15 < min;
     const st = !abiertas.length ? "ok" : pasada && r !== cur ? "bad" : mins(r.hora) - 15 <= min ? "now" : "prox";
     const def = st === "now" || st === "bad"; const abierta = ui.ag && r.hora in ui.ag ? ui.ag[r.hora] : def;
-    const est = st === "ok" ? `${ic("check", "s")} Todo registrado` : st === "bad" ? "Atrasada" : st === "now" ? "Es ahora" : `En ${durTxt(mins(r.hora) - min)}`;
+    const noT = vis.filter((t) => estado(t) === "nodada").length;
+    const est = st === "ok" ? (noT ? `${noT === 1 ? "1 no la tomó" : noT + " no las tomaron"}` : `${ic("check", "s")} Todo registrado`) : st === "bad" ? "Atrasada" : st === "now" ? "Es ahora" : `En ${durTxt(mins(r.hora) - min)}`;
     const resto = st === "ok" ? plural(hechas, "toma") : abiertas.length === vis.length ? `${plural(vis.length, "toma pendiente", "tomas pendientes")}` : `${hechas} de ${vis.length} · ${abiertas.length === 1 ? "falta 1" : `faltan ${abiertas.length}`}`;
     const pct = vis.length ? Math.round((hechas / vis.length) * 100) : 100;
-    return `<section class="ag ${st} ${abierta ? "open" : ""}" style="--i:${ri}" data-ronda="${r.hora}">
+    return `<section class="ag ${st} ${st === "ok" && noT ? "conno" : ""} ${abierta ? "open" : ""}" style="--i:${ri}" data-ronda="${r.hora}">
       <button class="ag-h" data-act="verRonda" data-h="${r.hora}" data-def="${def ? 1 : ""}" aria-expanded="${abierta}">
         <b class="ag-hora num">${r.hora}</b>
         <span class="ag-est"><span class="ag-tx">${est}</span><span class="ag-n num">${resto}</span></span>
@@ -151,15 +152,16 @@ function vPaciente(g, st, i) {
   }).join("");
   const nota = p.notas ? `<span class="pc-nota">${esc(p.notas)}</span>` : "";
   const acts = !pend.length ? "" : temprano
-    ? `<div class="pc-acts tarde"><span class="pc-hora">${ic("clock", "s")} A las ${esc(g.tomas[0].hora)}</span><button class="a2" data-act="ausencia" data-pid="${p.id}">No vino</button></div>`
+    ? `<div class="pc-acts"><button class="a2" data-act="ausencia" data-pid="${p.id}">No vino</button></div>`
     : `<div class="pc-acts">
         <button class="a-dar" data-act="darTodas" data-ids="${ids}" ${prev ? 'data-prev="1"' : ""}>${ic("check", "s")}${pend.length > 1 ? `Se las di · ${pend.length}` : "Se la di"}</button>
         <button class="a2" data-act="ausencia" data-pid="${p.id}">No vino</button>
         <button class="a2" data-act="sheet" data-s="otra" data-id="${pend[0].id}" data-ids="${ids}">Otra</button>
       </div>`;
-  const tono = !pend.length ? "lista" : temprano ? "luego" : prev || pend.some((t) => estado(t) === "atrasada") ? "tarde" : "pend";
+  const algunaNo = g.tomas.some((t) => estado(t) === "nodada");
+  const tono = !pend.length ? (algunaNo ? "nolatomo" : "lista") : temprano ? "pend falta" : prev || pend.some((t) => estado(t) === "atrasada") ? "tarde" : "pend";
   return `<article class="pc ${tono} ${recien ? "recien" : ""}" style="--i:${i}">
-    <button class="pc-who" data-act="ficha" data-pid="${p.id}">${avatar(p)}<span class="pc-nm"><b>${esc(p.nombre)}</b>${nota}</span>${pend.length && !temprano ? `<span class="pc-tag">${tono === "tarde" ? "Atrasada" : "Pendiente"}</span>` : ""}${!pend.length ? `<span class="pc-ok" aria-label="Lista">${ic("check", "s")}</span>` : ""}</button>
+    <button class="pc-who" data-act="ficha" data-pid="${p.id}">${avatar(p)}<span class="pc-nm"><b>${esc(p.nombre)}</b>${nota}</span>${pend.length ? `<span class="pc-tag">${tono === "tarde" ? "Atrasada" : temprano ? `A las ${esc(g.tomas[0].hora)}` : "Pendiente"}</span>` : ""}${!pend.length ? (algunaNo ? `<span class="pc-tag no">No la tomó</span>` : `<span class="pc-ok" aria-label="Lista">${ic("check", "s")}</span>`) : ""}</button>
     <ul class="pc-meds">${meds}</ul>
     ${acts}
   </article>`;
@@ -435,6 +437,20 @@ function vSheet() {
         <div class="timepick tres">${[10, 30, 60].map((n) => `<button class="opt" data-act="posponer" ${dI} data-n="${n}">${n === 60 ? "1 hora" : n + " min"}</button>`).join("")}</div>` : ""}
         ${ids.length > 1 ? `<div class="eyebrow">Tomó solo una</div>${Ts.map((x) => `<div class="opt solo"><span class="grow"><b>${esc(x.m.nombre)}</b> ${esc(x.m.dosis || "")}</span><button class="a-dar sm" data-act="dar" data-id="${x.id}">${ic("check", "s")}Se la di</button></div>`).join("")}` : ""}
       </div>`;
+      break;
+    }
+    case "confirmar": {
+      if (sh.tipo === "novino") {
+        const P = persona(sh.pid);
+        title = `¿${primerNombre(P.nombre)} no vino hoy?`; sub = "Sus tomas de hoy quedan anotadas como «No vino».";
+        body = `<div class="conf no">${avatar(P)}<b>${esc(P.nombre)}</b></div>`;
+        acts = `<button class="btn line" data-act="closeSheet">Cancelar</button><button class="btn rojo" data-act="ausencia" data-pid="${P.id}" data-ok="1">${ic("x", "s")} Confirmar</button>`;
+      } else {
+        const Ts = sh.ids.map(tomaPorId);
+        title = `¿${primerNombre(T.p.nombre)} ${Ts.length > 1 ? "tomó todo" : "la tomó"}?`; sub = `Queda anotado a las ${nowHM()}.`;
+        body = `<div class="conf">${avatar(T.p)}<b>${esc(T.p.nombre)}</b></div><ul class="conf-l">${Ts.map((x) => `<li><b>${esc(x.m.nombre)}</b>${x.m.dosis ? ` ${esc(x.m.dosis)}` : ""}</li>`).join("")}</ul>`;
+        acts = `<button class="btn line" data-act="closeSheet">Cancelar</button><button class="btn" data-act="darTodasOk">${ic("check", "s")} Confirmar</button>`;
+      }
       break;
     }
     case "nodio":
