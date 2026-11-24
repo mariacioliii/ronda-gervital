@@ -33,7 +33,7 @@ function vSetup() {
 function vLogin() {
   const f = ui.form || {};
   return vGate(`
-    <h1>Hola 👋</h1>
+    <h1>Hola</h1>
     <p class="g-sub">Entrá con tu usuario.</p>
     ${ui.loginMsg ? `<p class="g-msg">${esc(ui.loginMsg)}</p>` : ""}
     <form data-submit="entrar" autocomplete="on">
@@ -52,7 +52,7 @@ function vShell(content) {
   const tabBtn = (t, cls) => `<button class="${cls}" data-act="tab" data-tab="${t.id}" ${ui.tab === t.id && !ui.sub ? 'aria-current="page"' : ""}>`;
   const demo = Clock.offsetMin !== 0;
   return `
-  <div class="shell">
+  <div class="shell ${ui.sub === "persona" ? "editando" : ""}">
     <aside class="side">
       ${marca("Gervital")}
       <nav aria-label="Secciones">${tabs.map((t) => `${tabBtn(t, "nav")}${t.id === "mas" ? avatar(S.user, "xs") : ic(t.i)}${t.id === "mas" ? "Mi cuenta" : t.t}${t.id === "hoy" && pend ? `<span class="badge">${pend}</span>` : ""}</button>`).join("")}</nav>
