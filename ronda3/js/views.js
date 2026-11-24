@@ -97,7 +97,8 @@ function vHero(rondas, min) {
   const nombres = [...new Set(r.items.filter((t) => estado(t) !== "ausente" && abiertaT(t)).map((t) => primerNombre(t.p.nombre)))];
   const quien = nombres.length > 1 ? nombres.slice(0, -1).join(", ") + " y " + nombres[nombres.length - 1] : nombres[0] || "";
   return `<button class="prox-card ${r === atr ? "tarde" : ""}" data-act="irRonda" data-h="${r.hora}">
-    <span class="prox-k">${r === atr ? "Quedó atrasada" : "Próxima"}</span>
+    ${r === atr ? "" : `<span class="prox-anim" aria-hidden="true"><i class="cap c1"></i><i class="cap c2"></i><i class="cap c3"></i></span>`}
+    <span class="prox-k">${r === atr ? "Ronda atrasada" : "Próxima ronda"}</span>
     <b class="prox-t num">${r.hora}</b>
     <span class="prox-n">${esc(quien)}</span>
   </button>`;
@@ -152,7 +153,7 @@ function vPaciente(g, st, i) {
   }).join("");
   const nota = p.notas ? `<span class="pc-nota">${esc(p.notas)}</span>` : "";
   const acts = !pend.length ? "" : temprano
-    ? `<div class="pc-acts"><button class="a2" data-act="ausencia" data-pid="${p.id}">No vino</button></div>`
+    ? `<div class="pc-acts"><button class="a2" data-act="ausencia" data-pid="${p.id}">No vino</button><span class="pc-hint">Se registra desde las ${hm(mins(g.tomas[0].hora) - 15)}</span></div>`
     : `<div class="pc-acts">
         <button class="a-dar" data-act="darTodas" data-ids="${ids}" ${prev ? 'data-prev="1"' : ""}>${ic("check", "s")}${pend.length > 1 ? `Se las di · ${pend.length}` : "Se la di"}</button>
         <button class="a2" data-act="ausencia" data-pid="${p.id}">No vino</button>

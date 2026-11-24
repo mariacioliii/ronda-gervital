@@ -1148,3 +1148,28 @@ html.w980 .hoy::before { left: -36px; right: -36px; top: -28px; }
 .conf-l li b { font-weight: 500; }
 .btn.rojo { background: var(--rojo); color: #fff; }
 .pc.falta .a2 { padding: 0 22px; min-height: 48px; border-radius: 999px; background: rgba(255, 255, 255, .8); }
+
+/* Ronda 3.5 · Próxima ronda con cápsulas que flotan; cuánto falta en amarillo */
+.prox-card { position: relative; overflow: hidden; }
+.prox-card .prox-k, .prox-card .prox-t, .prox-card .prox-n { position: relative; z-index: 1; }
+.prox-card .prox-n { max-width: calc(100% - 96px); }
+.prox-anim { position: absolute; right: 18px; top: 0; bottom: 0; width: 108px; pointer-events: none; }
+.cap { position: absolute; display: block; width: 26px; height: 66px; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .95) 0 50%, #E8B4F0 50% 100%);
+  box-shadow: 0 10px 24px rgba(20, 6, 24, .35); will-change: transform; }
+.cap.c1 { right: 30px; top: 30%; --r: 28deg; animation: flota 5.2s ease-in-out infinite; }
+.cap.c2 { right: 2px; top: 12%; width: 16px; height: 42px; opacity: .75; --r: -22deg;
+  background: linear-gradient(180deg, #F3C11B 0 50%, rgba(255, 255, 255, .9) 50% 100%); animation: flota 6.4s ease-in-out -2s infinite; }
+.cap.c3 { right: 66px; top: 62%; width: 12px; height: 30px; opacity: .55; --r: 60deg; animation: flota 7s ease-in-out -4s infinite; }
+@keyframes flota {
+  0%, 100% { transform: translateY(0) rotate(var(--r)); }
+  50% { transform: translateY(-10px) rotate(calc(var(--r) + 14deg)); }
+}
+#app:not([data-kv]) .prox-anim .cap { animation-name: flota, cae; animation-duration: 5.2s, .7s; animation-timing-function: ease-in-out, var(--ease-out); animation-iteration-count: infinite, 1; }
+@keyframes cae { from { opacity: 0; translate: 0 -24px; } to { translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .cap { animation: none !important; transform: rotate(var(--r)); } }
+
+.ag.prox .ag-tx, .ag.now .ag-tx { display: inline-flex; align-self: flex-start; padding: 3px 11px; border-radius: 999px; background: #FFE9A6; color: var(--noche); font-weight: 500; }
+.ag.now .ag-tx { background: var(--sol); }
+.pc-hint { align-self: center; font-size: 14px; color: #6B5A70; }
+.pc.falta .pc-acts { align-items: center; gap: 14px; }
