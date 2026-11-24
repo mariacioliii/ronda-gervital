@@ -204,14 +204,14 @@ const A = {
     const t = tomaPorId(d.id);
     if (d.prev || minutosTarde(t) > S.cfg.margen || t.fecha !== today()) { ui.form = { horaReal: "" }; openSheet("cuando", { id: d.id }); return; }
     darToma(d.id); marcarRecien([d.id]); ui.sheet = null;
-    toast(`${t.m.nombre}: registrada para ${primerNombre(t.p.nombre)}`, true);
+    toast(`Listo: ${primerNombre(t.p.nombre)} tomó ${t.m.nombre} a las ${nowHM()}`, true);
   },
   darTodas(d) {
     const ids = d.ids.split(",");
     if (d.prev) { const t = tomaPorId(ids[0]); ui.form = { horaReal: "", ids }; openSheet("cuando", { id: ids[0], ids }); return; }
     ids.forEach((id, i) => darToma(id, null, i > 0)); marcarRecien(ids);
     const t = tomaPorId(ids[0]);
-    toast(`${plural(ids.length, "toma registrada", "tomas registradas")} para ${primerNombre(t.p.nombre)}`, true);
+    toast(`Listo: ${primerNombre(t.p.nombre)} tomó ${ids.length > 1 ? plural(ids.length, "medicamento") : t.m.nombre} a las ${nowHM()}`, true);
   },
   guardarCuando(d) {
     const h = normHora(ui.form.horaReal); if (!h) return;
@@ -226,7 +226,7 @@ const A = {
     ids.forEach((id, i) => { const t = tomaPorId(id); setReg(id, { ...regBase(t), estado: "nodada", motivo: f.motivo, nota: f.nota || "", horaReal: nowHM(), posp: null }, { join: i > 0 }); });
     const t = tomaPorId(ids[0]);
     ui.sheet = null; ui.form = null;
-    toast(`${ids.length > 1 ? plural(ids.length, "toma") : t.m.nombre} de ${primerNombre(t.p.nombre)}: no se dio`, true);
+    toast(`Anotado: ${primerNombre(t.p.nombre)} no tomó ${ids.length > 1 ? plural(ids.length, "medicamento") : t.m.nombre}`, true);
   },
   posponer(d) {
     const ids = d.ids ? d.ids.split(",") : [d.id]; const h = hm(nowMin() + +d.n);

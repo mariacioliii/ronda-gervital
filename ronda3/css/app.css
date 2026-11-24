@@ -1039,3 +1039,46 @@ input:focus, select:focus, textarea:focus { border-color: var(--noche); box-shad
 .shell.editando .tabs { display: none; }
 .shell.editando .formbar { bottom: 0; }
 .shell.editando main.page { padding-bottom: 32px; }
+
+/* ---------- Ronda 3.1 · más color (estados cálidos) ---------- */
+:root { --amar: #FFF1BF; --amar-2: #FFE596; --coral: #FDE3DB; --coral-2: #F8C9BC; --coral-ink: #B2341F; --verde: #E6F4EC; }
+.hoy { position: relative; isolation: isolate; }
+.hoy::before { content: ""; position: absolute; z-index: -1; left: -16px; right: -16px; top: calc(-20px - env(safe-area-inset-top, 0px)); height: 420px; pointer-events: none;
+  background: radial-gradient(60% 70% at 85% 0%, rgba(243, 193, 27, .22), transparent 70%), radial-gradient(70% 80% at 10% 10%, rgba(168, 104, 178, .18), transparent 70%); }
+html.w980 .hoy::before { left: -36px; right: -36px; top: -28px; }
+
+/* Ronda de ahora: bloque cálido con la hora grande */
+.ag.now, .ag.bad { border-top-color: transparent; }
+.ag.now + .ag, .ag.bad + .ag { border-top-color: transparent; }
+.ag.now .ag-h, .ag.bad .ag-h { border-radius: 26px; padding: 20px 18px; margin: 6px 0 10px; }
+.ag.now .ag-h { background: linear-gradient(135deg, #F4E8F6 0%, #FFF0C2 100%); }
+.ag.bad .ag-h { background: linear-gradient(135deg, #FBE6EA 0%, var(--coral) 100%); }
+.ag.now .ag-h .ag-hora, .ag.bad .ag-h .ag-hora { font-size: 54px; }
+.ag.now .ag-chev, .ag.bad .ag-chev { background: rgba(255, 255, 255, .7); }
+.ag.bad .ag-tx { color: var(--coral-ink); }
+.ag.ok .ag-tx { color: var(--ok); }
+
+/* Tarjeta según el estado */
+.pc { position: relative; overflow: hidden; }
+.pc.pend { background: linear-gradient(160deg, var(--amar) 0%, var(--amar-2) 100%); }
+.pc.tarde { background: linear-gradient(160deg, var(--coral) 0%, var(--coral-2) 100%); }
+.pc.lista { background: var(--verde); box-shadow: none; }
+.pc.pend .pc-meds, .pc.tarde .pc-meds { background: rgba(255, 255, 255, .72); }
+.pc.pend .pc-nota, .pc.tarde .pc-nota { color: #4E3F52; }
+.pc-tag { flex: none; align-self: flex-start; margin-top: 4px; padding: 6px 12px; border-radius: 999px; font-size: 13.5px; font-weight: 500; background: var(--sol); color: var(--noche); }
+.pc.tarde .pc-tag { background: var(--coral-ink); color: #fff; }
+.pc.pend .a2, .pc.tarde .a2 { background: rgba(255, 255, 255, .78); box-shadow: none; }
+.pc.lista .pc-meds li.hecho .md-n b, .pc.lista .pc-meds li.hecho .md-n span { color: var(--ink-2); }
+.pc.lista .md-st { color: var(--ok); }
+.tg.bad { background: rgba(255, 255, 255, .8); color: var(--coral-ink); }
+.a-dar { box-shadow: 0 10px 22px -12px rgba(46, 22, 52, .8); }
+@keyframes dada { 0% { background: #BFE6CD; } 100% { background: var(--verde); } }
+
+/* Al tocar "Se la di" el botón responde con un brillo que lo recorre */
+.a-dar { position: relative; overflow: hidden; }
+.a-dar::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%); transform: translateX(-100%); }
+.a-dar:active::after { transform: translateX(100%); transition: transform .5s var(--ease-out); }
+.resumen .ok { background: var(--verde); border-color: transparent; }
+.resumen .no, .resumen .srg { background: var(--coral); border-color: transparent; }
+.resumen .no b, .resumen .srg b { color: var(--coral-ink); }
+.resumen .pc2 { background: linear-gradient(135deg, #F4E8F6, #FFF0C2); border-color: transparent; }
