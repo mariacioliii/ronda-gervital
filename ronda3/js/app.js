@@ -79,6 +79,7 @@ function render() {
   if (focusSel) { const el = $(focusSel); if (el) { el.focus({ preventScroll: true }); if (caret != null) try { el.setSelectionRange(caret, caret); } catch (e) {} } }
   if (sc) sc.scrollTop = scrollY; else window.scrollTo(0, scrollY);
   marcoScroll();
+  if (ui.scrollTo) { const el = root.querySelector(`[data-ronda="${ui.scrollTo}"]`); ui.scrollTo = null; if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" })); }
 }
 function marcoScroll() { const a = $("#app"); a.style.setProperty("--st", (scroller() ? a.scrollTop : 0) + "px"); }
 function attrSel(el) {
@@ -193,6 +194,7 @@ const A = {
   scrim(d, el, ev) { if (ev.target === el) A.closeSheet(); },
   fSet(d) { ui.form[d.k] = d.v; },
   ronda(d) { ui.ronda = d.h; toTop(); },
+  irRonda(d) { ui.ag = ui.ag || {}; ui.ag[d.h] = true; ui.scrollTo = d.h; },
   verRonda(d) { ui.ag = ui.ag || {}; const cur = d.h in ui.ag ? ui.ag[d.h] : !!d.def; ui.ag[d.h] = !cur; },
   pfAct(d) { ui.pf.act = d.v === "1"; toTop(); },
   pfDia(d) { ui.pf.dia = d.n ? +d.n : null; },
