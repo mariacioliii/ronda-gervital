@@ -1,5 +1,5 @@
 /* Ronda · Gervital — funciona sin internet */
-const CACHE = "ronda3-v6";
+const CACHE = "ronda3-v7";
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "css/app.css", "css/fonts.css", "fonts/instrument-sans.woff2",
   "js/util.js", "js/db.js", "js/store.js", "js/nube.js", "js/icons.js", "js/seed.js", "js/alarm.js", "js/views.js", "js/app.js",

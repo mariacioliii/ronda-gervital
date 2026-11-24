@@ -88,6 +88,13 @@ function vHoy() {
 }
 
 /* Tarjeta de arriba: solo la próxima ronda, la hora y quién toma */
+/* Tres cápsulas que flotan. La fase sigue el reloj para que no salten cuando la pantalla se redibuja. */
+function vCapsulas() {
+  const t = -((Date.now() / 1000) % 60).toFixed(2);
+  const cap = (n) => `<span class="cw w${n}"><i class="cap"><b></b><b></b></i></span>`;
+  return `<span class="prox-anim" aria-hidden="true" style="--t:${t}s">${cap(1)}${cap(2)}${cap(3)}</span>`;
+}
+
 function vHero(rondas, min) {
   const cur = rondaActual(rondas);
   const conPend = (r) => r.items.some((t) => estado(t) !== "ausente" && abiertaT(t));
@@ -97,7 +104,7 @@ function vHero(rondas, min) {
   const nombres = [...new Set(r.items.filter((t) => estado(t) !== "ausente" && abiertaT(t)).map((t) => primerNombre(t.p.nombre)))];
   const quien = nombres.length > 1 ? nombres.slice(0, -1).join(", ") + " y " + nombres[nombres.length - 1] : nombres[0] || "";
   return `<button class="prox-card ${r === atr ? "tarde" : ""}" data-act="irRonda" data-h="${r.hora}">
-    ${r === atr ? "" : `<span class="prox-anim" aria-hidden="true"><i class="cap c1"></i><i class="cap c2"></i><i class="cap c3"></i></span>`}
+    ${r === atr ? "" : vCapsulas()}
     <span class="prox-k">${r === atr ? "Ronda atrasada" : "Próxima ronda"}</span>
     <b class="prox-t num">${r.hora}</b>
     <span class="prox-n">${esc(quien)}</span>
@@ -148,7 +155,7 @@ function vPaciente(g, st, i) {
     else if (e === "atrasada") tag = `<span class="tg bad">Hace ${durTxt(minutosTarde(t))}</span>`;
     else if (e === "pospuesta") tag = `<span class="tg warn">Para las ${esc(t.r.posp)}</span>`;
     const hecho = e === "dada" || e === "nodada";
-    const fin = hecho ? `<span class="md-st ${e}">${ic(e === "dada" ? "check" : "nodio", "s")}${e === "dada" ? "La tomó " + esc(t.r?.horaReal || "") : "No la tomó"} · ${esc(primerNombre(staffNombre(t.r?.por)))}</span>` : tag;
+    const fin = hecho ? `<span class="md-st ${e}">${ic(e === "dada" ? "check" : "nodio", "s")}${e === "dada" ? "La tomó " + esc(t.r?.horaReal || "") : "No la tomó"} · ${esc(primerNombre(staffNombre(t.r?.por)))}</span><span class="md-edit">Corregir</span>` : tag;
     return `<li class="${hecho ? "hecho " + e : ""}"><button class="md" data-act="sheet" data-s="${hecho ? "editreg" : "otra"}" data-id="${t.id}" data-ids="${t.id}"><span class="md-c ${e}" aria-hidden="true">${e === "dada" ? ic("check", "s") : e === "nodada" ? ic("x", "s") : ""}</span><span class="md-b"><span class="md-n"><b>${esc(t.m.nombre)}</b>${t.m.dosis ? ` <span>${esc(t.m.dosis)}</span>` : ""}</span>${t.m.indicacion ? `<span class="md-i">${esc(t.m.indicacion)}</span>` : ""}${fin ? `<span class="md-f">${fin}</span>` : ""}</span></button></li>`;
   }).join("");
   const nota = p.notas ? `<span class="pc-nota">${esc(p.notas)}</span>` : "";
@@ -187,7 +194,7 @@ function vNoVinieron(iso) {
   const no = S.personas.filter((p) => asisteEl(p, iso) && ausente(iso, p.id));
   if (!no.length) return "";
   return `<div class="sec-t"><h3>No vinieron</h3><span>${no.length}</span></div>
-    <div class="tomas">${no.map((p) => `<div class="tm">${avatar(p, "sm")}<span class="grow tx"><b>${esc(p.nombre)}</b></span><button class="mini" data-act="ausencia" data-pid="${p.id}">Sí vino</button></div>`).join("")}</div>`;
+    <div class="tomas">${no.map((p) => `<div class="tm">${avatar(p, "sm")}<span class="grow tx"><b>${esc(p.nombre)}</b></span><button class="mini" data-act="ausencia" data-pid="${p.id}">Corregir: sí vino</button></div>`).join("")}</div>`;
 }
 
 function vSinPersonas() {
@@ -305,8 +312,8 @@ function vHistorial() {
     <div class="dpills" role="group" aria-label="Estado">${[["", "Todas"], ["dada", "Tomadas"], ["nodada", "No tomadas"], ["sinreg", "Sin registrar"], ["ausencia", "No vino"]].map(([v, t]) => `<button data-act="hf" data-k="estado" data-v="${v}" aria-pressed="${H.estado === v}">${t}</button>`).join("")}</div>
     <div class="resumen">
       <div class="ok"><b>${dadas}</b><span>Tomadas</span></div>
-      <div class="no"><b>${no}</b><span>No tomadas</span></div>
-      <div class="srg"><b>${sr}</b><span>Sin registrar</span></div>
+      <div class="no ${no ? "" : "cero"}"><b>${no}</b><span>No tomadas</span></div>
+      <div class="srg ${sr ? "" : "cero"}"><b>${sr}</b><span>Sin registrar</span></div>
       <div class="pc2"><b>${tot ? Math.round((dadas / tot) * 100) : 0}%</b><span>Tomadas</span></div>
     </div>
     ${fechas.length ? fechas.map((f) => {

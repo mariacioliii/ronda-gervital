@@ -1173,3 +1173,63 @@ html.w980 .hoy::before { left: -36px; right: -36px; top: -28px; }
 .ag.now .ag-tx { background: var(--sol); }
 .pc-hint { align-self: center; font-size: 14px; color: #6B5A70; }
 .pc.falta .pc-acts { align-items: center; gap: 14px; }
+
+/* Ronda 3.6 · cápsulas con cuidado: entran con resorte, flotan con fase continua, la grande se abre apenas */
+.prox-anim .cap, .prox-anim .cw { all: unset; }
+.prox-anim { position: absolute; right: 14px; top: 0; bottom: 0; width: 112px; pointer-events: none; }
+.prox-anim .cw { position: absolute; display: block; }
+.prox-anim .w1 { right: 34px; top: 24%; --r: 24deg; --d: 12s; --s: 1; }
+.prox-anim .w2 { right: 0; top: 9%; --r: -28deg; --d: 10s; --s: .62; }
+.prox-anim .w3 { right: 72px; top: 60%; --r: 58deg; --d: 15s; --s: .46; }
+.prox-anim .cap { display: flex; flex-direction: column; width: calc(28px * var(--s)); height: calc(72px * var(--s));
+  transform: rotate(var(--r)); filter: drop-shadow(0 10px 14px rgba(20, 6, 24, .38));
+  animation: flota2 var(--d) cubic-bezier(.45, 0, .55, 1) var(--t) infinite; will-change: transform; }
+.prox-anim .cap b { position: relative; display: block; flex: 1; }
+.prox-anim .cap b:first-child { border-radius: 999px 999px 3px 3px;
+  background: linear-gradient(90deg, #FFFFFF 0%, #F5EEF7 55%, #D8C8DD 100%);
+  animation: abre var(--d) cubic-bezier(.77, 0, .175, 1) var(--t) infinite; }
+.prox-anim .cap b:last-child { border-radius: 3px 3px 999px 999px;
+  background: linear-gradient(90deg, #F4CDF9 0%, #D99DE4 55%, #A867B6 100%); }
+.prox-anim .w2 .cap b:first-child { background: linear-gradient(90deg, #FFE27A 0%, #F3C11B 55%, #C99A00 100%); }
+.prox-anim .w3 .cap b:last-child { background: linear-gradient(90deg, #FFFFFF 0%, #EDE3F0 60%, #CDBBD3 100%); }
+/* brillo: una línea fina de luz a lo largo */
+.prox-anim .cap b::after { content: ""; position: absolute; left: 22%; width: 14%; top: 18%; bottom: 18%; border-radius: 999px; background: rgba(255, 255, 255, .75); }
+.prox-anim .cap b:first-child::after { top: 30%; bottom: 0; }
+.prox-anim .cap b:last-child::after { top: 0; bottom: 30%; opacity: .55; }
+.prox-anim .w2 .cap b::after, .prox-anim .w3 .cap b::after { opacity: .5; }
+
+@keyframes flota2 {
+  0%, 100% { transform: translate(0, 0) rotate(var(--r)); }
+  25% { transform: translate(-3px, -9px) rotate(calc(var(--r) + 8deg)); }
+  50% { transform: translate(0, -4px) rotate(calc(var(--r) + 14deg)); }
+  75% { transform: translate(3px, -11px) rotate(calc(var(--r) + 5deg)); }
+}
+/* solo la grande se abre un poquito y se vuelve a cerrar, una vez por vuelta */
+@keyframes abre { 0%, 56%, 74%, 100% { transform: translateY(0); } 62%, 68% { transform: translateY(-5px); } }
+.prox-anim .w2 .cap b:first-child, .prox-anim .w3 .cap b:first-child { animation: none; }
+
+/* entrada: caen desde arriba con un resorte suave, escalonadas */
+#app:not([data-kv]) .prox-anim .cw { animation: cae2 .9s cubic-bezier(.34, 1.4, .64, 1) both; }
+#app:not([data-kv]) .prox-anim .w1 { animation-delay: .18s; }
+#app:not([data-kv]) .prox-anim .w2 { animation-delay: .26s; }
+#app:not([data-kv]) .prox-anim .w3 { animation-delay: .38s; }
+@keyframes cae2 { from { opacity: 0; transform: translateY(-36px) scale(.9); } to { opacity: 1; transform: none; } }
+
+/* al tocar la tarjeta, las cápsulas acompañan el gesto */
+.prox-card .cw { transition: transform .5s cubic-bezier(.34, 1.4, .64, 1); }
+.prox-card:active .w1 { transform: translateY(-6px); }
+.prox-card:active .w2 { transform: translateY(-9px); }
+.prox-card:active .w3 { transform: translateY(-4px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .prox-anim .cap, .prox-anim .cap b, .prox-anim .cw { animation: none !important; transition: none !important; }
+}
+
+.md-edit { display: inline-block; margin-top: 6px; font-size: 14px; font-weight: 500; color: var(--noche); text-decoration: none; padding: 4px 12px; border-radius: 999px; background: rgba(255, 255, 255, .7); box-shadow: inset 0 0 0 1px rgba(46, 22, 52, .14); }
+.md-f { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; }
+
+/* Ronda 3.6 · historial: las cuatro tarjetas del mismo tamaño; en cero no se pintan de rojo */
+.resumen { grid-auto-rows: 1fr; }
+.resumen > div { display: flex; flex-direction: column; justify-content: flex-start; gap: 2px; padding: 16px 18px; min-height: 104px; margin: 0; box-sizing: border-box; }
+.resumen .cero { background: var(--surface-2, #F5F2F6); }
+.resumen .cero b { color: var(--ink-2); }
