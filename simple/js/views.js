@@ -99,12 +99,13 @@ function vHoyAgenda(rondas, min, top, iso) {
     const pasada = mins(r.hora) + 15 < min;
     const st = !abiertas.length ? "ok" : pasada && r !== cur ? "bad" : mins(r.hora) - 15 <= min ? "now" : "prox";
     const def = st === "now" || st === "bad"; const abierta = ui.ag && r.hora in ui.ag ? ui.ag[r.hora] : def;
-    const est = st === "ok" ? `${ic("check", "s")} Lista` : st === "bad" ? `Faltan ${abiertas.length}` : st === "now" ? "Ahora" : `En ${durTxt(mins(r.hora) - min)}`;
+    const est = st === "ok" ? `${ic("check", "s")} Todo registrado` : st === "bad" ? "Atrasada" : st === "now" ? "Es ahora" : `En ${durTxt(mins(r.hora) - min)}`;
+    const resto = st === "ok" ? plural(hechas, "toma") : abiertas.length === vis.length ? `${plural(vis.length, "toma pendiente", "tomas pendientes")}` : `${hechas} de ${vis.length} · ${abiertas.length === 1 ? "falta 1" : `faltan ${abiertas.length}`}`;
     const pct = vis.length ? Math.round((hechas / vis.length) * 100) : 100;
     return `<section class="ag ${st} ${abierta ? "open" : ""}" style="--i:${ri}">
       <button class="ag-h" data-act="verRonda" data-h="${r.hora}" data-def="${def ? 1 : ""}" aria-expanded="${abierta}">
         <b class="ag-hora num">${r.hora}</b>
-        <span class="ag-est"><span class="ag-tx">${est}</span><span class="ag-n num">${hechas} de ${vis.length} registradas</span></span>
+        <span class="ag-est"><span class="ag-tx">${est}</span><span class="ag-n num">${resto}</span></span>
         <span class="ag-chev">${ic("chevD", "s")}</span>
         <span class="ag-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>
       </button>
@@ -129,19 +130,20 @@ function vPaciente(g, st, i) {
     else if (e === "atrasada") tag = `<span class="tg bad">Hace ${durTxt(minutosTarde(t))}</span>`;
     else if (e === "pospuesta") tag = `<span class="tg warn">Para las ${esc(t.r.posp)}</span>`;
     const hecho = e === "dada" || e === "nodada";
-    const fin = hecho ? `<span class="md-st ${e}">${ic(e === "dada" ? "check" : "nodio", "s")}${e === "dada" ? esc(t.r?.horaReal || "") : "No"} · ${esc(primerNombre(staffNombre(t.r?.por)))}</span>` : tag;
+    const fin = hecho ? `<span class="md-st ${e}">${ic(e === "dada" ? "check" : "nodio", "s")}${e === "dada" ? "La tomó " + esc(t.r?.horaReal || "") : "No la tomó"} · ${esc(primerNombre(staffNombre(t.r?.por)))}</span>` : tag;
     return `<li class="${hecho ? "hecho " + e : ""}"><button class="md" data-act="sheet" data-s="${hecho ? "editreg" : "otra"}" data-id="${t.id}" data-ids="${t.id}"><span class="md-n"><b>${esc(t.m.nombre)}</b>${t.m.dosis ? ` <span>${esc(t.m.dosis)}</span>` : ""}</span>${t.m.indicacion ? `<span class="md-i">${esc(t.m.indicacion)}</span>` : ""}${fin ? `<span class="md-f">${fin}</span>` : ""}</button></li>`;
   }).join("");
   const nota = p.notas ? `<span class="pc-nota">${esc(p.notas)}</span>` : "";
   const acts = !pend.length ? "" : temprano
     ? `<div class="pc-acts tarde"><span class="pc-hora">${ic("clock", "s")} A las ${esc(g.tomas[0].hora)}</span><button class="a2" data-act="ausencia" data-pid="${p.id}">No vino</button></div>`
     : `<div class="pc-acts">
-        <button class="a-dar" data-act="darTodas" data-ids="${ids}" ${prev ? 'data-prev="1"' : ""}>${ic("check", "s")}${pend.length > 1 ? `Dar las ${pend.length}` : "Dar"}</button>
+        <button class="a-dar" data-act="darTodas" data-ids="${ids}" ${prev ? 'data-prev="1"' : ""}>${ic("check", "s")}${pend.length > 1 ? `Se las di · ${pend.length}` : "Se la di"}</button>
         <button class="a2" data-act="ausencia" data-pid="${p.id}">No vino</button>
         <button class="a2" data-act="sheet" data-s="otra" data-id="${pend[0].id}" data-ids="${ids}">Otra</button>
       </div>`;
-  return `<article class="pc ${pend.length ? "" : "lista"} ${recien ? "recien" : ""}" style="--i:${i}">
-    <button class="pc-who" data-act="ficha" data-pid="${p.id}">${avatar(p)}<span class="pc-nm"><b>${esc(p.nombre)}</b>${nota}</span>${!pend.length ? `<span class="pc-ok" aria-label="Lista">${ic("check", "s")}</span>` : ""}</button>
+  const tono = !pend.length ? "lista" : temprano ? "luego" : prev || pend.some((t) => estado(t) === "atrasada") ? "tarde" : "pend";
+  return `<article class="pc ${tono} ${recien ? "recien" : ""}" style="--i:${i}">
+    <button class="pc-who" data-act="ficha" data-pid="${p.id}">${avatar(p)}<span class="pc-nm"><b>${esc(p.nombre)}</b>${nota}</span>${pend.length && !temprano ? `<span class="pc-tag">${tono === "tarde" ? "Atrasada" : "Pendiente"}</span>` : ""}${!pend.length ? `<span class="pc-ok" aria-label="Lista">${ic("check", "s")}</span>` : ""}</button>
     <ul class="pc-meds">${meds}</ul>
     ${acts}
   </article>`;
@@ -278,19 +280,19 @@ function vHistorial() {
       <div class="seg" role="group" aria-label="Período">${[["hoy", "Hoy"], ["7", "7 días"], ["30", "30 días"]].map(([v, t]) => `<button data-act="hf" data-k="rango" data-v="${v}" aria-pressed="${H.rango === v}">${t}</button>`).join("")}</div>
       <select data-hf="pid" aria-label="Persona"><option value="">Todas las personas</option>${personasOpt}</select>
     </div>
-    <div class="dpills" role="group" aria-label="Estado">${[["", "Todas"], ["dada", "Dadas"], ["nodada", "No se dieron"], ["sinreg", "Sin registrar"], ["ausencia", "No vino"]].map(([v, t]) => `<button data-act="hf" data-k="estado" data-v="${v}" aria-pressed="${H.estado === v}">${t}</button>`).join("")}</div>
+    <div class="dpills" role="group" aria-label="Estado">${[["", "Todas"], ["dada", "Tomadas"], ["nodada", "No tomadas"], ["sinreg", "Sin registrar"], ["ausencia", "No vino"]].map(([v, t]) => `<button data-act="hf" data-k="estado" data-v="${v}" aria-pressed="${H.estado === v}">${t}</button>`).join("")}</div>
     <div class="resumen">
-      <div class="ok"><b>${dadas}</b><span>Dadas</span></div>
-      <div class="no"><b>${no}</b><span>No se dieron</span></div>
+      <div class="ok"><b>${dadas}</b><span>Tomadas</span></div>
+      <div class="no"><b>${no}</b><span>No tomadas</span></div>
       <div class="srg"><b>${sr}</b><span>Sin registrar</span></div>
-      <div class="pc2"><b>${tot ? Math.round((dadas / tot) * 100) : 0}%</b><span>Se dieron</span></div>
+      <div class="pc2"><b>${tot ? Math.round((dadas / tot) * 100) : 0}%</b><span>Tomadas</span></div>
     </div>
     ${fechas.length ? fechas.map((f) => {
       const del = items.filter((x) => x.fecha === f).sort((a, b) => (a.hora || "99").localeCompare(b.hora || "99") || a.p.nombre.localeCompare(b.p.nombre));
       return `<div class="hdia"><h2 class="h3">${esc(fechaRel(f))}</h2><span class="faint small">${f === today() ? esc(fechaLarga(f)) : ""}</span></div>
       <div class="list">${del.map((x) => x.e === "ausencia"
         ? `<div class="hrow"><span class="hh">—</span><span><b>${esc(x.p.nombre)}</b><div class="x">${x.a.motivo ? esc(x.a.motivo) + " · " : ""}marcó ${esc(primerNombre(staffNombre(x.a.por)))}</div></span><span class="st ausencia">No vino</span></div>`
-        : `<button class="hrow" data-act="sheet" data-s="editreg" data-id="${x.id}"><span class="hh">${esc(x.hora)}${x.r?.horaReal && x.r.horaReal !== x.hora ? `<small>dada ${esc(x.r.horaReal)}</small>` : ""}</span><span><b>${esc(x.p.nombre)}</b><div class="x">${esc(x.m.nombre)} ${esc(x.m.dosis || "")}${x.r?.por ? ` · ${esc(primerNombre(staffNombre(x.r.por)))}` : ""}${x.r?.motivo ? ` · ${esc(x.r.motivo)}` : ""}${x.r?.ediciones?.length ? " · corregida" : ""}</div></span><span class="st ${x.e}">${ESTADO_TXT[x.e]}</span></button>`).join("")}</div>`;
+        : `<button class="hrow" data-act="sheet" data-s="editreg" data-id="${x.id}"><span class="hh">${esc(x.hora)}${x.r?.horaReal && x.r.horaReal !== x.hora ? `<small>a las ${esc(x.r.horaReal)}</small>` : ""}</span><span><b>${esc(x.p.nombre)}</b><div class="x">${esc(x.m.nombre)} ${esc(x.m.dosis || "")}${x.r?.por ? ` · ${esc(primerNombre(staffNombre(x.r.por)))}` : ""}${x.r?.motivo ? ` · ${esc(x.r.motivo)}` : ""}${x.r?.ediciones?.length ? " · corregida" : ""}</div></span><span class="st ${x.e}">${ESTADO_TXT[x.e]}</span></button>`).join("")}</div>`;
     }).join("") : `<div class="empty"><div>${MARK}</div><h3>No hay registros en este período</h3><p>Cuando registren tomas en Hoy, van a aparecer acá.</p></div>`}`;
 }
 
@@ -408,16 +410,16 @@ function vSheet() {
       const dI = `data-ids="${ids.join(",")}" data-id="${T.id}"`;
       title = T.p.nombre; sub = `Ronda de las ${T.hora} · ${pas}`;
       body = `<div class="opts">
-        <button class="opt" data-act="sheet" data-s="nodio" ${dI}>${ic("nodio")}<span class="grow">No se ${ids.length > 1 ? "las" : "la"} dio<small>Se negó, estaba descansando, no había…</small></span>${ic("chevR", "s")}</button>
+        <button class="opt" data-act="sheet" data-s="nodio" ${dI}>${ic("nodio")}<span class="grow">No ${ids.length > 1 ? "las" : "la"} tomó<small>Se negó, estaba descansando, no había…</small></span>${ic("chevR", "s")}</button>
         <button class="opt" data-act="sheet" data-s="cuando" ${dI}>${ic("clock")}<span class="grow">Se ${ids.length > 1 ? "las" : "la"} di a otra hora</span>${ic("chevR", "s")}</button>
-        ${T.fecha === today() && estado(T) !== "sinreg" ? `<div class="eyebrow">Darla más tarde</div>
+        ${T.fecha === today() && estado(T) !== "sinreg" ? `<div class="eyebrow">Recordarme en</div>
         <div class="timepick tres">${[10, 30, 60].map((n) => `<button class="opt" data-act="posponer" ${dI} data-n="${n}">${n === 60 ? "1 hora" : n + " min"}</button>`).join("")}</div>` : ""}
-        ${ids.length > 1 ? `<div class="eyebrow">Dar solo una</div>${Ts.map((x) => `<div class="opt solo"><span class="grow"><b>${esc(x.m.nombre)}</b> ${esc(x.m.dosis || "")}</span><button class="a-dar sm" data-act="dar" data-id="${x.id}">${ic("check", "s")}Dar</button></div>`).join("")}` : ""}
+        ${ids.length > 1 ? `<div class="eyebrow">Tomó solo una</div>${Ts.map((x) => `<div class="opt solo"><span class="grow"><b>${esc(x.m.nombre)}</b> ${esc(x.m.dosis || "")}</span><button class="a-dar sm" data-act="dar" data-id="${x.id}">${ic("check", "s")}Se la di</button></div>`).join("")}` : ""}
       </div>`;
       break;
     }
     case "nodio":
-      title = "¿Por qué no se dio?"; sub = sh.ids && sh.ids.length > 1 ? `${primerNombre(T.p.nombre)} · ${plural(sh.ids.length, "medicamento")}` : tname;
+      title = "¿Por qué no la tomó?"; sub = sh.ids && sh.ids.length > 1 ? `${primerNombre(T.p.nombre)} · ${plural(sh.ids.length, "medicamento")}` : tname;
       body = `<div class="opts">${MOTIVOS.map((m) => `<button class="opt" data-act="fSet" data-k="motivo" data-v="${esc(m)}" aria-pressed="${f.motivo === m}"><span class="grow">${esc(m)}</span>${f.motivo === m ? ic("check") : ""}</button>`).join("")}</div>
         <label class="field" style="margin:14px 0 0"><span>Nota (opcional)</span><input type="text" data-f="nota" value="${esc(f.nota || "")}" placeholder="Ej.: se la ofrecimos dos veces"></label>`;
       acts = `<button class="btn line" data-act="closeSheet">Cancelar</button><button class="btn" data-act="guardarNodio" data-id="${T.id}" ${f.motivo ? "" : "disabled"}>Guardar</button>`;
@@ -439,7 +441,7 @@ function vSheet() {
       title = tname; sub = `${fechaRel(T.fecha)} · toma de las ${T.hora}`;
       const ed = T.r?.ediciones || [];
       body = `
-        <div class="seg" role="group" aria-label="Estado" style="margin-bottom:14px"><button data-act="fSet" data-k="estado" data-v="dada" aria-pressed="${f.estado === "dada"}">Se dio</button><button data-act="fSet" data-k="estado" data-v="nodada" aria-pressed="${f.estado === "nodada"}">No se dio</button></div>
+        <div class="seg" role="group" aria-label="Estado" style="margin-bottom:14px"><button data-act="fSet" data-k="estado" data-v="dada" aria-pressed="${f.estado === "dada"}">La tomó</button><button data-act="fSet" data-k="estado" data-v="nodada" aria-pressed="${f.estado === "nodada"}">No la tomó</button></div>
         ${f.estado === "dada" ? `<label class="field"><span>Hora en que se dio</span><input type="time" data-f="horaReal" value="${esc(f.horaReal || "")}"></label>` : ""}
         ${f.estado === "nodada" ? `<label class="field"><span>Motivo</span><select data-f="motivo"><option value="">Elegí un motivo</option>${MOTIVOS.map((m) => `<option ${f.motivo === m ? "selected" : ""}>${esc(m)}</option>`).join("")}</select></label>` : ""}
         <label class="field"><span>Nota (opcional)</span><input type="text" data-f="nota" value="${esc(f.nota || "")}"></label>
@@ -613,7 +615,7 @@ function vAlarm() {
     </div>
     <div class="al-acts">
       <button class="al-posp" data-act="alarmPosponer">${ic("clock", "s")} Posponer 10 minutos</button>
-      <button class="al-ver" data-act="alarmVer">Ver la ronda</button>
+      <button class="al-ver" data-act="alarmVer">Ir a registrar</button>
       <button class="al-off" data-act="alarmSilenciar">Apagar</button>
     </div>
   </div>`;

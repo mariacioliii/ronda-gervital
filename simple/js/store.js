@@ -203,6 +203,6 @@ function historial(desde, hasta) {
 }
 
 const ESTADO_TXT = {
-  dada: "Dada", nodada: "No se dio", pendiente: "Para dar", pospuesta: "Pospuesta", atrasada: "Atrasada",
+  dada: "La tomó", nodada: "No la tomó", pendiente: "Pendiente", pospuesta: "Pospuesta", atrasada: "Atrasada",
   sinreg: "Sin registrar", proxima: "Más tarde", ausente: "No vino", ausencia: "No vino",
 };
