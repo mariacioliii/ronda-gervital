@@ -95,10 +95,26 @@ const Alarm = {
   activa: null, // { kind, hora, total, personas }
   disparadas() { return kvGet("alarmas-" + today()) || []; },
   marcar(key) { const l = this.disparadas(); if (!l.includes(key)) { l.push(key); kvSet("alarmas-" + today(), l); } },
+  /* Posponer: la misma alarma vuelve a sonar en n minutos si la ronda sigue con tomas sin dar */
+  posponer(n) {
+    const a = this.activa; this.cerrar();
+    if (!a || a.prueba) return;
+    const l = (kvGet("alarmas-posp-" + today()) || []).filter((x) => x.hora !== a.hora);
+    l.push({ hora: a.hora, kind: a.kind, at: nowMin() + n });
+    kvSet("alarmas-posp-" + today(), l);
+  },
   check() {
     const rondas = rondasDe(today());
     const ahora = nowMin();
     const ya = this.disparadas();
+    const posp = kvGet("alarmas-posp-" + today()) || [];
+    for (const x of posp) {
+      if (ahora < x.at) continue;
+      kvSet("alarmas-posp-" + today(), posp.filter((y) => y !== x));
+      const r = rondas.find((y) => y.hora === x.hora);
+      const pend = r ? r.items.filter((t) => abierta(estado(t))) : [];
+      if (pend.length) { this.disparar(x.kind, r, pend); return; }
+    }
     for (const r of rondas) {
       const h = mins(r.hora);
       const pendientes = r.items.filter((t) => abierta(estado(t)));

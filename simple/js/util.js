@@ -51,7 +51,7 @@ const diasTexto = (dias) => {
 const primerNombre = (n) => String(n || "").trim().split(/\s+/)[0];
 const iniciales = (n) => String(n || "?").trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
 /* Tono de avatar estable dentro de la paleta */
-const AV = ["#86428F", "#A35A8C", "#6E5AA0", "#9A4E6E", "#5E7A8F", "#7B6A3A", "#4F7A64", "#8F5A42"];
+const AV = ["#2E1634", "#86428F", "#5B4A7A", "#8C4A6A", "#4D6478", "#6B5A3E", "#3F6656", "#7A4F55"];
 const avColor = (id) => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return AV[h % AV.length]; };
 const plural = (n, s, p) => `${n} ${n === 1 ? s : p || s + "s"}`;
 

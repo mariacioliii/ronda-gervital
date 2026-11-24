@@ -82,42 +82,69 @@ function vHoy() {
   if (!S.personas.some((p) => p.activo !== false)) return vSinPersonas();
   const rondas = rondasDe(iso);
   const min = nowMin();
-  const top = `<header class="hoy-top"><div class="grow"><p class="fecha">${esc(fechaLarga(iso))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div><div class="reloj js-reloj ${Clock.offsetMin ? "demo" : ""}"><span class="dot"></span><span class="js-hora">${nowHM()}</span></div></header>`;
+  const top = `<header class="hoy-top"><div class="grow"><p class="fecha et">${esc(fechaLarga(iso))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div><div class="reloj js-reloj ${Clock.offsetMin ? "demo" : ""}"><span class="dot"></span><span class="js-hora">${nowHM()}</span></div></header>`;
   if (!rondas.length) return `<div class="hoy">${top}<div class="vacio">${MARK}<h3>Hoy no hay medicación</h3></div>${vNoVinieron(iso)}</div>`;
   return vHoyAgenda(rondas, min, top, iso);
 }
 
-/* Agenda por horario: cada ronda es un bloque; la de ahora y las atrasadas abiertas */
+/* Agenda por horario: cada ronda es un bloque; la de ahora y las atrasadas abiertas.
+   Dentro de la ronda, una tarjeta por persona con toda su medicación y las tres acciones a la vista. */
 function vHoyAgenda(rondas, min, top, iso) {
   const cur = rondaActual(rondas);
   let h = top;
-  h += `<div class="agenda">${rondas.map((r) => {
-    const abiertas = r.items.filter(abiertaT);
+  h += `<div class="agenda">${rondas.map((r, ri) => {
+    const vis = r.items.filter((t) => estado(t) !== "ausente");
+    const abiertas = vis.filter(abiertaT);
+    const hechas = vis.length - abiertas.length;
     const pasada = mins(r.hora) + 15 < min;
     const st = !abiertas.length ? "ok" : pasada && r !== cur ? "bad" : mins(r.hora) - 15 <= min ? "now" : "prox";
     const def = st === "now" || st === "bad"; const abierta = ui.ag && r.hora in ui.ag ? ui.ag[r.hora] : def;
-    const chip = st === "ok" ? `<span class="chip ok">${ic("check", "s")} Lista</span>` : st === "bad" ? `<span class="chip bad">Faltan ${abiertas.length}</span>` : st === "now" ? `<span class="chip now">Ahora · ${abiertas.length}</span>` : `<span class="chip">${plural(abiertas.length, "toma")}</span>`;
-    return `<section class="ag ${st} ${abierta ? "open" : ""}">
-      <button class="ag-h" data-act="verRonda" data-h="${r.hora}" data-def="${def ? 1 : ""}" aria-expanded="${abierta}"><span class="dot"></span><b class="num">${r.hora}</b>${chip}<span class="grow"></span>${ic(abierta ? "chevU" : "chevD", "s")}</button>
-      ${abierta ? `<div class="tomas">${r.items.filter((t) => estado(t) !== "ausente").map((t) => vToma(t, st === "bad", st === "prox")).join("")}</div>` : ""}
+    const est = st === "ok" ? `${ic("check", "s")} Lista` : st === "bad" ? `Faltan ${abiertas.length}` : st === "now" ? "Ahora" : `En ${durTxt(mins(r.hora) - min)}`;
+    const pct = vis.length ? Math.round((hechas / vis.length) * 100) : 100;
+    return `<section class="ag ${st} ${abierta ? "open" : ""}" style="--i:${ri}">
+      <button class="ag-h" data-act="verRonda" data-h="${r.hora}" data-def="${def ? 1 : ""}" aria-expanded="${abierta}">
+        <b class="ag-hora num">${r.hora}</b>
+        <span class="ag-est"><span class="ag-tx">${est}</span><span class="ag-n num">${hechas} de ${vis.length} registradas</span></span>
+        <span class="ag-chev">${ic("chevD", "s")}</span>
+        <span class="ag-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>
+      </button>
+      ${abierta ? `<div class="pcs">${agrupar(vis).map((g, i) => vPaciente(g, st, i)).join("")}</div>` : ""}
     </section>`;
   }).join("")}</div>`;
   return `<div class="hoy">${h}${vInvitaAvisos()}${vNoVinieron(iso)}</div>`;
 }
 
-/* Una toma: persona + medicamento + botón Dar */
-function vToma(t, prev, temprano) {
-  const e = estado(t), p = t.p, open = abiertaT(t);
-  let tag = "";
-  if (e === "sinreg") tag = `<span class="tg bad">Sin registrar</span>`;
-  else if (e === "atrasada") tag = `<span class="tg bad">${t.hora} · hace ${durTxt(minutosTarde(t))}</span>`;
-  else if (e === "pospuesta") tag = `<span class="tg warn">Para las ${esc(t.r.posp)}</span>`;
-  const info = `<span class="grow tx"><b>${esc(p.nombre)}</b><span class="md">${medTxt(t.m)}${t.m.indicacion ? ` · ${esc(t.m.indicacion)}` : ""}</span>${p.alergias ? `<span class="alg">${ic("alert", "s")} Alergia: ${esc(p.alergias)}</span>` : ""}${tag ? `<span>${tag}</span>` : ""}</span>`;
-  if (open) return `<div class="tm">
-      <button class="tm-i" data-act="ficha" data-pid="${p.id}">${avatar(p)}${info}</button>
-      <div class="tm-a">${temprano ? `<span class="hora num">${t.hora}</span>` : `<button class="dar3" data-act="dar" data-id="${t.id}" ${prev || e === "sinreg" ? 'data-prev="1"' : ""}>Dar</button>`}<button class="mas3" data-act="sheet" data-s="otra" data-id="${t.id}" aria-label="Otras opciones">${ic("mas", "s")}</button></div>
-    </div>`;
-  return `<button class="tm done ${e === "nodada" ? "no" : ""}" data-act="sheet" data-s="editreg" data-id="${t.id}">${avatar(p)}<span class="grow tx"><b>${esc(p.nombre)}</b><span class="md">${medTxt(t.m)}</span></span><span class="st2">${ic(e === "dada" ? "check" : "nodio", "s")}<span>${e === "dada" ? esc(t.r?.horaReal || "") : "No"}<br>${esc(primerNombre(staffNombre(t.r?.por)))}</span></span></button>`;
+/* Tarjeta de una persona en una ronda: quién es, qué toma y las acciones Dar · No vino · Otra */
+function vPaciente(g, st, i) {
+  const p = g.p;
+  const pend = g.tomas.filter(abiertaT);
+  const temprano = st === "prox";
+  const prev = st === "bad" || pend.some((t) => estado(t) === "sinreg");
+  const ids = pend.map((t) => t.id).join(",");
+  const recien = ui.recien && g.tomas.some((t) => ui.recien.includes(t.id));
+  const meds = g.tomas.map((t) => {
+    const e = estado(t);
+    let tag = "";
+    if (e === "sinreg") tag = `<span class="tg bad">Sin registrar</span>`;
+    else if (e === "atrasada") tag = `<span class="tg bad">Hace ${durTxt(minutosTarde(t))}</span>`;
+    else if (e === "pospuesta") tag = `<span class="tg warn">Para las ${esc(t.r.posp)}</span>`;
+    const hecho = e === "dada" || e === "nodada";
+    const fin = hecho ? `<span class="md-st ${e}">${ic(e === "dada" ? "check" : "nodio", "s")}${e === "dada" ? esc(t.r?.horaReal || "") : "No"} · ${esc(primerNombre(staffNombre(t.r?.por)))}</span>` : tag;
+    return `<li class="${hecho ? "hecho " + e : ""}"><button class="md" data-act="sheet" data-s="${hecho ? "editreg" : "otra"}" data-id="${t.id}" data-ids="${t.id}"><span class="md-n"><b>${esc(t.m.nombre)}</b>${t.m.dosis ? ` <span>${esc(t.m.dosis)}</span>` : ""}</span>${t.m.indicacion ? `<span class="md-i">${esc(t.m.indicacion)}</span>` : ""}${fin ? `<span class="md-f">${fin}</span>` : ""}</button></li>`;
+  }).join("");
+  const nota = p.notas ? `<span class="pc-nota">${esc(p.notas)}</span>` : "";
+  const acts = !pend.length ? "" : temprano
+    ? `<div class="pc-acts tarde"><span class="pc-hora">${ic("clock", "s")} A las ${esc(g.tomas[0].hora)}</span><button class="a2" data-act="ausencia" data-pid="${p.id}">No vino</button></div>`
+    : `<div class="pc-acts">
+        <button class="a-dar" data-act="darTodas" data-ids="${ids}" ${prev ? 'data-prev="1"' : ""}>${ic("check", "s")}${pend.length > 1 ? `Dar las ${pend.length}` : "Dar"}</button>
+        <button class="a2" data-act="ausencia" data-pid="${p.id}">No vino</button>
+        <button class="a2" data-act="sheet" data-s="otra" data-id="${pend[0].id}" data-ids="${ids}">Otra</button>
+      </div>`;
+  return `<article class="pc ${pend.length ? "" : "lista"} ${recien ? "recien" : ""}" style="--i:${i}">
+    <button class="pc-who" data-act="ficha" data-pid="${p.id}">${avatar(p)}<span class="pc-nm"><b>${esc(p.nombre)}</b>${nota}</span>${!pend.length ? `<span class="pc-ok" aria-label="Lista">${ic("check", "s")}</span>` : ""}</button>
+    <ul class="pc-meds">${meds}</ul>
+    ${acts}
+  </article>`;
 }
 
 function vInvitaAvisos() {
@@ -198,10 +225,8 @@ function vFicha() {
       <div style="margin-top:6px">${p.activo === false ? '<span class="st ausente">Dada de baja</span>' : !viene ? '<span class="st ausente">Hoy no viene</span>' : aus ? '<span class="st ausente">Hoy no vino</span>' : '<span class="st dada">Hoy viene</span>'}</div></div>
       <button class="iconbtn close" data-act="closeFicha" aria-label="Cerrar">${ic("x")}</button></div>
     <div class="db">
-      ${p.alergias ? `<div class="aviso bad" style="margin-bottom:6px">${ic("alert")}<div><b>Alergia: ${esc(p.alergias)}</b></div></div>` : ""}
       ${p.notas ? `<div class="kv"><span>A tener en cuenta</span><div>${esc(p.notas)}</div></div>` : ""}
-      ${p.contacto || p.tel ? `<div class="kv"><span>Contacto de referencia</span><div class="row"><div class="grow">${esc(p.contacto || "")}<div class="muted small num">${esc(p.tel || "")}</div></div>${p.tel ? `<a class="btn sec sm" href="tel:${esc(p.tel.replace(/[^\d+]/g, ""))}">${ic("phone", "s")} Llamar</a>` : ""}</div></div>` : ""}
-      <div class="kv"><span>Medicación</span>${ms.length ? ms.map((m) => `<div class="dmed"><span class="pill" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--lila);color:var(--violeta)">${ic("pill", "s")}</span><div class="grow"><b>${esc(m.nombre)}</b> <span class="muted">${esc(m.dosis || "")}</span>${m.indicacion ? `<div class="faint small">${esc(m.indicacion)}</div>` : ""}</div><div class="num" style="font-weight:700;text-align:right">${m.horas.join("<br>")}</div></div>`).join("") : `<div class="muted">Sin medicación cargada.</div>`}</div>
+      <div class="kv"><span>Medicación</span>${ms.length ? ms.map((m) => `<div class="dmed"><div class="grow"><b>${esc(m.nombre)}</b> <span class="muted">${esc(m.dosis || "")}</span>${m.indicacion ? `<div class="faint small">${esc(m.indicacion)}</div>` : ""}</div><div class="num" style="font-weight:700;text-align:right">${m.horas.join("<br>")}</div></div>`).join("") : `<div class="muted">Sin medicación cargada.</div>`}</div>
       ${ult.length ? `<div class="kv"><span>Últimas tomas</span>${ult.map((r) => `<div class="row" style="padding:5px 0"><span class="st ${r.estado}">${ESTADO_TXT[r.estado]}</span><span class="grow small">${esc(r.medNombre || "")}</span><span class="faint xs num">${esc(fechaCorta(r.fecha))} ${esc(r.horaReal || r.hora)}</span></div>`).join("")}</div>` : ""}
       <div class="dacts">
         <button class="btn sec" data-act="editarPersona" data-pid="${p.id}">${ic("edit", "s")} Editar</button>
@@ -220,17 +245,12 @@ function vPersonaEdit() {
     <div class="subhead"><button class="iconbtn" data-act="back" aria-label="Volver">${ic("chevL")}</button><h1 class="h2">${nueva ? "Nueva persona" : "Editar a " + esc(primerNombre(f.nombre) || "la persona")}</h1></div>
     <div class="card pad">
       <label class="field"><span>Nombre y apellido</span><input type="text" data-f="nombre" value="${esc(f.nombre)}" placeholder="Ej.: Elena Rodríguez"></label>
-      <div class="field"><span class="flabel">Días que viene al centro</span><div class="dsel" role="group" aria-label="Días">${DIAS.map((d) => `<button data-act="fDia" data-n="${d.n}" aria-pressed="${f.dias.includes(d.n)}" aria-label="${d.l}">${d.c}</button>`).join("")}</div><span class="hint">${esc(diasTexto(f.dias))}</span></div>
-      <label class="field"><span>Alergias</span><input type="text" data-f="alergias" value="${esc(f.alergias)}" placeholder="Dejalo vacío si no tiene"></label>
-      <label class="field"><span>A tener en cuenta</span><textarea data-f="notas" placeholder="Ej.: le cuesta tragar, prefiere tomarla con jugo">${esc(f.notas)}</textarea></label>
-      <div class="row" style="gap:10px;flex-wrap:wrap">
-        <label class="field grow" style="min-width:200px"><span>Contacto de referencia</span><input type="text" data-f="contacto" value="${esc(f.contacto)}" placeholder="Ej.: Laura (hija)"></label>
-        <label class="field grow" style="min-width:160px"><span>Teléfono</span><input type="tel" data-f="tel" value="${esc(f.tel)}" placeholder="099 123 456"></label>
-      </div>
+      <div class="field"><span class="flabel">Días que viene al centro</span><div class="dsel" role="group" aria-label="Días">${DIAS.map((d) => `<button data-act="fDia" data-n="${d.n}" aria-pressed="${f.dias.includes(d.n)}" aria-label="${d.l}">${d.c}</button>`).join("")}</div><span class="hint">${f.dias.length ? esc(diasTexto(f.dias)) : "Tocá los días en que viene"}</span></div>
+      <label class="field"><span>A tener en cuenta <i>(opcional)</i></span><textarea data-f="notas" placeholder="Ej.: le cuesta tragar, prefiere tomarla con jugo">${esc(f.notas)}</textarea></label>
     </div>
     <div class="section"><h2 class="h3">Medicación en el centro</h2><div class="sp"></div><button class="btn sec sm" data-act="medNuevo">${ic("plus", "s")} Agregar</button></div>
     ${f.meds.filter((m) => !m._del).length ? `<div class="list">${f.meds.map((m, i) => m._del ? "" : `
-      <div class="li"><span class="ic">${ic("pill")}</span><span class="grow"><span class="t">${esc(m.nombre)} <span class="muted" style="font-weight:400">${esc(m.dosis || "")}</span></span><span class="d" style="display:block">${m.horas.join(" · ") || "Sin horario"}${m.indicacion ? " · " + esc(m.indicacion) : ""}</span></span><button class="btn line xs" data-act="medEdit" data-i="${i}">Editar</button></div>`).join("")}</div>`
+      <div class="li"><span class="grow"><span class="t">${esc(m.nombre)} <span class="muted" style="font-weight:400">${esc(m.dosis || "")}</span></span><span class="d" style="display:block">${m.horas.join(" · ") || "Sin horario"}${m.indicacion ? " · " + esc(m.indicacion) : ""}</span></span><button class="btn line xs" data-act="medEdit" data-i="${i}">Editar</button></div>`).join("")}</div>`
       : `<div class="aviso">${ic("pill")}<div>Todavía no tiene medicación. Agregá cada medicamento con su dosis y horario.</div></div>`}
     ${!nueva ? `<div class="baja card pad">${f.activo !== false
       ? `<div class="grow"><b>Dar de baja</b><p>Si ya no viene al centro, deja de aparecer en las rondas y sus alarmas no suenan. Su historial queda guardado.</p></div><button class="btn danger" data-act="sheet" data-s="baja">${ic("ausente", "s")} Dar de baja</button>`
@@ -382,24 +402,28 @@ function vSheet() {
   const T = sh.id ? tomaPorId(sh.id) : null;
   const tname = T ? `${T.m.nombre} ${T.m.dosis || ""} · ${primerNombre(T.p.nombre)}` : "";
   switch (sh.s) {
-    case "otra":
-      title = tname; sub = `Toma de las ${T.hora}`;
+    case "otra": {
+      const ids = sh.ids || [T.id]; const Ts = ids.map(tomaPorId);
+      const pas = Ts.map((x) => `${x.m.nombre}${x.m.dosis ? " " + x.m.dosis : ""}`).join(" · ");
+      const dI = `data-ids="${ids.join(",")}" data-id="${T.id}"`;
+      title = T.p.nombre; sub = `Ronda de las ${T.hora} · ${pas}`;
       body = `<div class="opts">
-        ${T.fecha === today() && !T.aus ? `<button class="opt" data-act="ausencia" data-pid="${T.p.id}"><span class="oi">${ic("ausente")}</span><span class="grow">${esc(primerNombre(T.p.nombre))} no vino hoy</span>${ic("chevR")}</button>` : ""}
-        <button class="opt" data-act="sheet" data-s="nodio" data-id="${T.id}"><span class="oi bad">${ic("nodio")}</span><span class="grow">No se la dio</span>${ic("chevR")}</button>
-        <button class="opt" data-act="sheet" data-s="cuando" data-id="${T.id}"><span class="oi">${ic("clock")}</span><span class="grow">Se la di a otra hora</span>${ic("chevR")}</button>
-        ${T.fecha === today() && estado(T) !== "sinreg" ? `<div class="eyebrow" style="margin:12px 4px 2px">Darla más tarde</div>
-        <div class="timepick" style="grid-template-columns:repeat(3,1fr)">${[15, 30, 60].map((n) => `<button class="opt" style="justify-content:center" data-act="posponer" data-id="${T.id}" data-n="${n}">${n === 60 ? "1 hora" : n + " min"}</button>`).join("")}</div>` : ""}
+        <button class="opt" data-act="sheet" data-s="nodio" ${dI}>${ic("nodio")}<span class="grow">No se ${ids.length > 1 ? "las" : "la"} dio<small>Se negó, estaba descansando, no había…</small></span>${ic("chevR", "s")}</button>
+        <button class="opt" data-act="sheet" data-s="cuando" ${dI}>${ic("clock")}<span class="grow">Se ${ids.length > 1 ? "las" : "la"} di a otra hora</span>${ic("chevR", "s")}</button>
+        ${T.fecha === today() && estado(T) !== "sinreg" ? `<div class="eyebrow">Darla más tarde</div>
+        <div class="timepick tres">${[10, 30, 60].map((n) => `<button class="opt" data-act="posponer" ${dI} data-n="${n}">${n === 60 ? "1 hora" : n + " min"}</button>`).join("")}</div>` : ""}
+        ${ids.length > 1 ? `<div class="eyebrow">Dar solo una</div>${Ts.map((x) => `<div class="opt solo"><span class="grow"><b>${esc(x.m.nombre)}</b> ${esc(x.m.dosis || "")}</span><button class="a-dar sm" data-act="dar" data-id="${x.id}">${ic("check", "s")}Dar</button></div>`).join("")}` : ""}
       </div>`;
       break;
+    }
     case "nodio":
-      title = "¿Por qué no se dio?"; sub = tname;
+      title = "¿Por qué no se dio?"; sub = sh.ids && sh.ids.length > 1 ? `${primerNombre(T.p.nombre)} · ${plural(sh.ids.length, "medicamento")}` : tname;
       body = `<div class="opts">${MOTIVOS.map((m) => `<button class="opt" data-act="fSet" data-k="motivo" data-v="${esc(m)}" aria-pressed="${f.motivo === m}"><span class="grow">${esc(m)}</span>${f.motivo === m ? ic("check") : ""}</button>`).join("")}</div>
         <label class="field" style="margin:14px 0 0"><span>Nota (opcional)</span><input type="text" data-f="nota" value="${esc(f.nota || "")}" placeholder="Ej.: se la ofrecimos dos veces"></label>`;
       acts = `<button class="btn line" data-act="closeSheet">Cancelar</button><button class="btn" data-act="guardarNodio" data-id="${T.id}" ${f.motivo ? "" : "disabled"}>Guardar</button>`;
       break;
     case "cuando": {
-      title = "¿A qué hora se la diste?"; sub = tname;
+      title = "¿A qué hora se la diste?"; sub = sh.ids && sh.ids.length > 1 ? `${primerNombre(T.p.nombre)} · ${plural(sh.ids.length, "medicamento")}` : tname;
       const ahora = nowHM();
       const esHoy = T.fecha === today();
       body = `<div class="timepick">
@@ -447,7 +471,7 @@ function vSheet() {
         <label class="field"><span>Medicamento</span><input type="text" data-fm="nombre" value="${esc(m.nombre)}" placeholder="Ej.: Losartán"></label>
         <div class="row" style="gap:10px;flex-wrap:wrap"><label class="field grow" style="min-width:140px"><span>Dosis</span><input type="text" data-fm="dosis" value="${esc(m.dosis)}" placeholder="Ej.: 50 mg"></label>
         <label class="field grow" style="min-width:200px"><span>Indicación (opcional)</span><input type="text" data-fm="indicacion" value="${esc(m.indicacion)}" placeholder="Ej.: con el desayuno"></label></div>
-        <div class="field"><span class="flabel">Horarios en el centro</span><div class="horas">${m.horas.map((h, i) => `<span class="hora-chip">${h}<button data-act="medHoraDel" data-i="${i}" aria-label="Quitar ${h}">${ic("x", "s")}</button></span>`).join("")}<input type="time" data-fm="nuevaHora" value="${esc(m.nuevaHora || "")}" aria-label="Nueva hora"><button class="btn sec sm" data-act="medHoraAdd">${ic("plus", "s")} Sumar hora</button></div><span class="hint">Cada horario arma una ronda. Si dos personas toman a la misma hora, van en la misma ronda.</span></div>
+        <div class="field"><span class="flabel">${m.horas.length ? "Horarios en el centro" : "Hora en el centro"}</span>${m.horas.length ? `<div class="horas">${m.horas.map((h, i) => `<span class="hora-chip num">${h}<button data-act="medHoraDel" data-i="${i}" aria-label="Quitar ${h}">${ic("x", "s")}</button></span>`).join("")}</div>` : ""}<div class="hora-add"><input type="time" class="num" data-fm="nuevaHora" value="${esc(m.nuevaHora || "")}" aria-label="Hora">${m.horas.length ? `<button class="btn sec sm" data-act="medHoraAdd">${ic("plus", "s")} Sumar esta hora</button>` : `<button class="link sm" data-act="medHoraAdd">${ic("plus", "s")} Toma a otra hora también</button>`}</div><span class="hint">Viene en 12:00. Tocala para cambiarla.</span></div>
         ${ui.medErr ? `<p class="err">${esc(ui.medErr)}</p>` : ""}`;
       acts = `${m._nuevo ? `<button class="btn line" data-act="closeSheet">Cancelar</button>` : `<button class="btn danger" data-act="medQuitar">${ic("trash", "s")} Quitar</button>`}<button class="btn" data-act="medGuardar">Listo</button>`;
       break;
@@ -579,16 +603,19 @@ function vSheet() {
 /* ---------- Alarma a pantalla completa ---------- */
 function vAlarm() {
   const a = Alarm.activa; if (!a) return "";
-  const R = responsableHoy();
   const ronda = a.kind === "ronda";
   return `<div class="alarm ${ronda ? "" : "atraso"}" role="alertdialog" aria-modal="true" aria-label="${ronda ? "Llegó la ronda" : "Tomas atrasadas"}">
-    <div class="bell">${ic(ronda ? "bell" : "alert")}</div>
-    <div class="k">${a.prueba ? "Prueba de alarma" : ronda ? "Ronda de medicación" : "Quedan tomas sin dar"}</div>
-    <h2 class="num">${ronda ? `Son las ${esc(a.hora)}` : `Ronda de las ${esc(a.hora)}`}</h2>
-    <p>${ronda ? `${plural(a.personas, "persona")} · ${plural(a.total, "toma")}` : `${plural(a.total, "toma atrasada", "tomas atrasadas")}`}</p>
-    <p class="who">${esc(a.nombres.join(", "))}</p>
-    ${R.tipo === "persona" ? `<p style="opacity:.85">Le toca a ${esc(R.u.nombre)}</p>` : R.tipo === "compartida" ? `<p style="opacity:.85">Hoy es responsabilidad de todos</p>` : ""}
-    <div class="acts"><button class="btn ink" data-act="alarmVer">${ic("check")} Ver la ronda</button><button class="btn line" data-act="alarmSilenciar">Silenciar</button></div>
+    <div class="al-top"><span class="al-k"><span class="al-dot"></span>${a.prueba ? "Prueba de alarma" : ronda ? "Ronda de medicación" : "Quedan tomas sin dar"}</span></div>
+    <div class="al-mid">
+      <h2 class="num">${esc(a.hora)}</h2>
+      <p class="al-q">${ronda ? `${plural(a.personas, "persona")} · ${plural(a.total, "toma")}` : `${plural(a.total, "toma atrasada", "tomas atrasadas")}`}</p>
+      <p class="al-who">${a.nombres.map((n) => `<span>${esc(n)}</span>`).join("")}</p>
+    </div>
+    <div class="al-acts">
+      <button class="al-posp" data-act="alarmPosponer">${ic("clock", "s")} Posponer 10 minutos</button>
+      <button class="al-ver" data-act="alarmVer">Ver la ronda</button>
+      <button class="al-off" data-act="alarmSilenciar">Apagar</button>
+    </div>
   </div>`;
 }
 

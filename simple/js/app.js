@@ -14,6 +14,7 @@ let listo = false;
 let deferredInstall = null;
 let lastActivity = Date.now();
 let lastMin = -1;
+let prevKeys = {};
 
 /* ---------- Tamaño de pantalla y vista de celular ---------- */
 const Vista = {
@@ -68,6 +69,10 @@ function render() {
     html = vShell(content) + (ui.ficha ? vFicha() : "");
   }
   html += vSheet() + vAlarm() + vToast();
+  /* Las entradas animadas se ven solo cuando algo aparece, no en cada re-render */
+  const keys = { v: S.user ? `${ui.tab}|${ui.sub || ""}` : "gate", s: ui.sheet ? ui.sheet.s + (ui.sheet.id || "") : "", f: ui.ficha || "", a: Alarm.activa ? "1" : "", t: ui.toast ? ui.toast.msg : "" };
+  for (const k in keys) root.toggleAttribute("data-k" + k, !!keys[k] && keys[k] === prevKeys[k]);
+  prevKeys = keys;
   root.innerHTML = html;
   document.body.style.overflow = ui.sheet || Alarm.activa || ui.ficha ? "hidden" : "";
 
@@ -118,6 +123,10 @@ function iniciarSesion(u, silencioso) {
   if (!silencioso) Sound.unlock();
   ui = { ...UI0(), tab: "hoy" };
 }
+
+/* La tarjeta que se acaba de registrar se anima una sola vez */
+let recienTimer;
+function marcarRecien(ids) { ui.recien = ids; clearTimeout(recienTimer); recienTimer = setTimeout(() => { ui.recien = null; }, 1400); }
 
 /* ---------- Acciones ---------- */
 const A = {
@@ -178,7 +187,7 @@ const A = {
     else if (s === "unir") { ui.form = { unir: d.v || "" }; ui.nubeErr = null; }
     else if (["nube", "avisos"].includes(s)) { ui.nubeErr = null; if (ui.sub !== "persona") ui.form = null; }
     else if (s !== "restore") { if (ui.sub !== "persona") ui.form = null; }
-    openSheet(s, { id: d.id, pid: d.pid });
+    openSheet(s, { id: d.id, pid: d.pid, ids: d.ids ? d.ids.split(",") : (ui.sheet && ui.sheet.ids && ui.sheet.id === d.id ? ui.sheet.ids : null) });
   },
   closeSheet() { closeSheet(); },
   scrim(d, el, ev) { if (ev.target === el) A.closeSheet(); },
@@ -194,35 +203,37 @@ const A = {
   dar(d) {
     const t = tomaPorId(d.id);
     if (d.prev || minutosTarde(t) > S.cfg.margen || t.fecha !== today()) { ui.form = { horaReal: "" }; openSheet("cuando", { id: d.id }); return; }
-    darToma(d.id);
+    darToma(d.id); marcarRecien([d.id]); ui.sheet = null;
     toast(`${t.m.nombre}: registrada para ${primerNombre(t.p.nombre)}`, true);
   },
   darTodas(d) {
     const ids = d.ids.split(",");
     if (d.prev) { const t = tomaPorId(ids[0]); ui.form = { horaReal: "", ids }; openSheet("cuando", { id: ids[0], ids }); return; }
-    ids.forEach((id, i) => darToma(id, null, i > 0));
+    ids.forEach((id, i) => darToma(id, null, i > 0)); marcarRecien(ids);
     const t = tomaPorId(ids[0]);
     toast(`${plural(ids.length, "toma registrada", "tomas registradas")} para ${primerNombre(t.p.nombre)}`, true);
   },
   guardarCuando(d) {
     const h = normHora(ui.form.horaReal); if (!h) return;
     const ids = ui.sheet.ids || [d.id];
-    ids.forEach((id, i) => darToma(id, h, i > 0));
+    ids.forEach((id, i) => darToma(id, h, i > 0)); marcarRecien(ids);
     const t = tomaPorId(ids[0]);
     ui.sheet = null; ui.form = null;
     toast(`${ids.length > 1 ? plural(ids.length, "toma") : t.m.nombre} de ${primerNombre(t.p.nombre)}: dada a las ${h}`, true);
   },
   guardarNodio(d) {
-    const t = tomaPorId(d.id); const f = ui.form;
-    setReg(d.id, { ...regBase(t), estado: "nodada", motivo: f.motivo, nota: f.nota || "", horaReal: nowHM(), posp: null });
+    const f = ui.form; const ids = ui.sheet.ids || [d.id];
+    ids.forEach((id, i) => { const t = tomaPorId(id); setReg(id, { ...regBase(t), estado: "nodada", motivo: f.motivo, nota: f.nota || "", horaReal: nowHM(), posp: null }, { join: i > 0 }); });
+    const t = tomaPorId(ids[0]);
     ui.sheet = null; ui.form = null;
-    toast(`${t.m.nombre} de ${primerNombre(t.p.nombre)}: no se dio`, true);
+    toast(`${ids.length > 1 ? plural(ids.length, "toma") : t.m.nombre} de ${primerNombre(t.p.nombre)}: no se dio`, true);
   },
   posponer(d) {
-    const t = tomaPorId(d.id); const h = hm(nowMin() + +d.n);
-    setReg(d.id, { ...regBase(t), estado: "pospuesta", posp: h });
+    const ids = d.ids ? d.ids.split(",") : [d.id]; const h = hm(nowMin() + +d.n);
+    ids.forEach((id, i) => { const t = tomaPorId(id); setReg(id, { ...regBase(t), estado: "pospuesta", posp: h }, { join: i > 0 }); });
+    const t = tomaPorId(ids[0]);
     ui.sheet = null;
-    toast(`${t.m.nombre} de ${primerNombre(t.p.nombre)}: para las ${h}`, true);
+    toast(`${ids.length > 1 ? plural(ids.length, "toma") : t.m.nombre} de ${primerNombre(t.p.nombre)}: para las ${h}`, true);
   },
   guardarEdit(d) {
     const t = tomaPorId(d.id); const f = ui.form;
@@ -255,23 +266,23 @@ const A = {
   },
 
   /* Personas */
-  nuevaPersona() { ui.form = { id: null, nombre: "", dias: [1, 2, 3, 4, 5], alergias: "", notas: "", contacto: "", tel: "", activo: true, meds: [] }; ui.formErr = null; ui.sub = "persona"; ui.ficha = null; ui.sheet = null; toTop(); },
+  nuevaPersona() { ui.form = { id: null, nombre: "", dias: [], notas: "", activo: true, meds: [] }; ui.formErr = null; ui.sub = "persona"; ui.ficha = null; ui.sheet = null; toTop(); },
   editarPersona(d) {
     const p = persona(d.pid);
-    ui.form = { ...clone(p), alergias: p.alergias || "", notas: p.notas || "", contacto: p.contacto || "", tel: p.tel || "", meds: medsDe(p.id).map(clone) };
+    ui.form = { ...clone(p), notas: p.notas || "", meds: medsDe(p.id).map(clone) };
     ui.formErr = null; ui.sub = "persona"; ui.ficha = null; ui.sheet = null; toTop();
   },
   fDia(d) { const n = +d.n, f = ui.form; f.dias = f.dias.includes(n) ? f.dias.filter((x) => x !== n) : [...f.dias, n].sort(); },
   fToggle(d) { ui.form[d.k] = !ui.form[d.k]; },
   darBaja() { const n = primerNombre(ui.form.nombre); ui.form.activo = false; ui.sheet = null; A.guardarPersona(); if (!ui.form) { ui.ficha = null; toast(`${n} quedó dada de baja. La encontrás en Personas, en "Dadas de baja".`); } },
   darAlta() { const n = primerNombre(ui.form.nombre); ui.form.activo = true; A.guardarPersona(); if (!ui.form) toast(`${n} volvió a estar activa`); },
-  medNuevo() { ui.form.med = { _nuevo: true, nombre: "", dosis: "", indicacion: "", horas: [], nuevaHora: "" }; ui.medErr = null; openSheet("med"); },
-  medEdit(d) { ui.form.med = { ...clone(ui.form.meds[+d.i]), _i: +d.i, nuevaHora: "" }; ui.medErr = null; openSheet("med"); },
-  medHoraAdd() { const m = ui.form.med; const h = normHora(m.nuevaHora); if (!h) { ui.medErr = "Elegí una hora."; return; } if (!m.horas.includes(h)) m.horas = [...m.horas, h].sort(); m.nuevaHora = ""; ui.medErr = null; },
+  medNuevo() { ui.form.med = { _nuevo: true, nombre: "", dosis: "", indicacion: "", horas: [], nuevaHora: "12:00" }; ui.medErr = null; openSheet("med"); },
+  medEdit(d) { ui.form.med = { ...clone(ui.form.meds[+d.i]), _i: +d.i, nuevaHora: "12:00" }; ui.medErr = null; openSheet("med"); },
+  medHoraAdd() { const m = ui.form.med; const h = normHora(m.nuevaHora); if (!h) { ui.medErr = "Elegí una hora."; return; } if (!m.horas.includes(h)) m.horas = [...m.horas, h].sort(); m.nuevaHora = "12:00"; ui.medErr = null; },
   medHoraDel(d) { const m = ui.form.med; m.horas.splice(+d.i, 1); },
   medGuardar() {
     const m = ui.form.med;
-    const h = normHora(m.nuevaHora); if (h && !m.horas.includes(h)) m.horas = [...m.horas, h].sort();
+    const h = normHora(m.nuevaHora); if (h && !m.horas.length) m.horas = [h];
     if (!m.nombre.trim()) { ui.medErr = "Escribí el nombre del medicamento."; return; }
     if (!m.horas.length) { ui.medErr = "Sumá al menos un horario."; return; }
     const clean = { id: m.id || uid("m-"), nombre: m.nombre.trim(), dosis: m.dosis.trim(), indicacion: (m.indicacion || "").trim(), horas: m.horas, activo: true, _dirty: true, _nuevoMed: !m.id };
@@ -284,7 +295,7 @@ const A = {
     if (!f.nombre.trim()) { ui.formErr = "Escribí el nombre de la persona."; return; }
     if (!f.dias.length) { ui.formErr = "Elegí al menos un día en que viene al centro."; return; }
     const nueva = !f.id;
-    const p = { id: f.id || uid("p-"), nombre: f.nombre.trim(), dias: f.dias, alergias: f.alergias.trim(), notas: f.notas.trim(), contacto: f.contacto.trim(), tel: f.tel.trim(), activo: f.activo !== false, creado: f.creado || Date.now(), desde: f.desde || (nueva ? today() : undefined) };
+    const p = { id: f.id || uid("p-"), nombre: f.nombre.trim(), dias: f.dias, notas: (f.notas || "").trim(), activo: f.activo !== false, creado: f.creado || Date.now(), desde: f.desde || (nueva ? today() : undefined) };
     savePersona(p);
     for (const m of f.meds) {
       if (m._del) { if (!m._nuevoMed) removeMed(m.id); continue; }
@@ -340,6 +351,7 @@ const A = {
   probarAlarma(d) { ui.sheet = null; Alarm.probar(d.k); },
   alarmVer() { Alarm.cerrar(); if (S.user) goTab("hoy"); },
   alarmSilenciar() { Sound.stop(); Alarm.activa = null; },
+  alarmPosponer() { const a = Alarm.activa; Alarm.posponer(10); if (a && !a.prueba) toast(`La alarma vuelve a sonar a las ${hm(nowMin() + 10)}`); },
   demoHora(d) {
     if (!d.h) { Clock.offsetMin = 0; }
     else { const real = new Date(); Clock.offsetMin = mins(d.h) - (real.getHours() * 60 + real.getMinutes()); }
@@ -449,7 +461,7 @@ const A = {
     const byName = new Map(S.personas.map((p) => [sinTildes(p.nombre), p]));
     for (const r of pv.filas) {
       let p = byName.get(sinTildes(r.nombre));
-      if (!p) { p = { id: uid("p-"), nombre: r.nombre, dias: r.dias || [1, 2, 3, 4, 5], notas: "", alergias: "", contacto: "", tel: "", activo: true, creado: Date.now(), desde: today() }; savePersona(p); byName.set(sinTildes(r.nombre), p); nP++; }
+      if (!p) { p = { id: uid("p-"), nombre: r.nombre, dias: r.dias || [1, 2, 3, 4, 5], notas: "", activo: true, creado: Date.now(), desde: today() }; savePersona(p); byName.set(sinTildes(r.nombre), p); nP++; }
       else if (r.dias && !p._tocado) { p = { ...p, dias: [...new Set([...(p.dias || []), ...r.dias])].sort() }; savePersona(p); byName.set(sinTildes(r.nombre), p); }
       const ya = S.meds.find((m) => m.pid === p.id && sinTildes(m.nombre) === sinTildes(r.med) && (m.dosis || "") === r.dosis);
       if (ya) { saveMed({ ...ya, horas: [...new Set([...ya.horas, ...r.horas])].sort() }); }
