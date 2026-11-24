@@ -1078,37 +1078,18 @@ html.w980 .hoy::before { left: -36px; right: -36px; top: -28px; }
 .resumen .no b, .resumen .srg b { color: var(--coral-ink); }
 .resumen .pc2 { background: linear-gradient(135deg, #F4E8F6, #FFF0C2); border-color: transparent; }
 
-/* ---------- Ronda 3.2 · tarjeta destacada, avance y círculos ---------- */
-.hero { display: flex; align-items: center; gap: 16px; width: 100%; text-align: left; margin: 0 0 18px; padding: 22px 20px 22px 22px; border-radius: 30px; color: #fff;
-  background: radial-gradient(120% 90% at 100% 0%, rgba(243, 193, 27, .35), transparent 55%), linear-gradient(140deg, #9A52A3 0%, #6A2F73 45%, var(--noche) 100%);
-  box-shadow: 0 22px 40px -24px rgba(46, 22, 52, .9); transition: transform .16s var(--ease-out); }
-.hero:active { transform: scale(.98); }
-.hero.tarde { background: radial-gradient(120% 90% at 100% 0%, rgba(255, 190, 160, .4), transparent 55%), linear-gradient(140deg, #C24A3A 0%, #8E2B36 55%, #4A1830 100%); }
-.hero.listo { background: linear-gradient(140deg, #2F7A55 0%, #1D4E39 100%); }
-.hero-tx { flex: 1; min-width: 0; display: grid; gap: 4px; }
-.hero-k { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; color: rgba(255, 255, 255, .82); }
-.hero-t { font-size: 60px; font-weight: 400; letter-spacing: -.055em; line-height: .95; margin-top: 4px; }
-.hero.listo .hero-t { font-size: 34px; letter-spacing: -.035em; }
-.hero-n { font-size: 15.5px; line-height: 1.3; color: rgba(255, 255, 255, .88); margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.hero-q { font-size: 13.5px; color: rgba(255, 255, 255, .7); }
-.hero-side { display: grid; justify-items: center; gap: 6px; flex: none; align-self: center; }
-.hero-side > small { font-size: 12px; color: rgba(255, 255, 255, .72); }
-.hero-ring { position: relative; width: 84px; height: 84px; flex: none; display: grid; place-items: center; }
-.hero-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
-.hero-ring circle { fill: none; stroke-width: 7; }
-.hero-ring .bg { stroke: rgba(255, 255, 255, .18); }
-.hero-ring .fg { stroke: var(--sol); stroke-linecap: round; transition: stroke-dashoffset .8s var(--ease-out); }
-.hero.listo .hero-ring .fg { stroke: #fff; }
-.hero-ring > span { position: relative; display: grid; justify-items: center; line-height: 1; }
-.hero-ring b { font-size: 26px; font-weight: 500; letter-spacing: -.03em; }
-.hero-ring small { font-size: 12px; color: rgba(255, 255, 255, .75); margin-top: 2px; }
-#app:not([data-kv]) .hero { animation: entra .55s var(--ease-out) both .05s; }
-#app:not([data-kv]) .hero-ring .fg { animation: anillo 1.1s var(--ease-out) both .25s; }
-@keyframes anillo { from { stroke-dashoffset: 213.6; } }
+/* ---------- Ronda 3.3 · tarjeta "Próxima", limpia ---------- */
+.prox-card { display: grid; gap: 2px; width: 100%; text-align: left; margin: 0 0 18px; padding: 22px 24px 24px; border-radius: 28px; color: #fff;
+  background: linear-gradient(150deg, #8B4594 0%, #5A2963 55%, var(--noche) 100%); transition: transform .16s var(--ease-out); }
+.prox-card:active { transform: scale(.98); }
+.prox-card.tarde { background: linear-gradient(150deg, #C0493A 0%, #8C2A36 100%); }
+.prox-card.listo { background: linear-gradient(150deg, #2F7A55 0%, #1D4E39 100%); }
+.prox-k { font-size: 15px; color: rgba(255, 255, 255, .78); }
+.prox-t { font-size: 64px; font-weight: 400; letter-spacing: -.055em; line-height: 1; margin: 2px 0 6px; }
+.prox-card.listo .prox-t { font-size: 34px; letter-spacing: -.035em; margin-bottom: 0; }
+.prox-n { font-size: 18px; line-height: 1.3; color: #fff; }
+#app:not([data-kv]) .prox-card { animation: entra .55s var(--ease-out) both .05s; }
 .ag { scroll-margin-top: 16px; }
-
-.ag-mo { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--uva); }
-.ag-mo svg { width: 15px; height: 15px; }
 
 /* Círculo para tildar al lado de cada remedio */
 .md { display: flex; align-items: flex-start; gap: 12px; }
@@ -1127,3 +1108,21 @@ html.w980 .hoy::before { left: -36px; right: -36px; top: -28px; }
 .pv-t { font-size: 13.5px; color: var(--ink-2); white-space: nowrap; }
 .pv-b { flex: 1; max-width: 140px; height: 5px; border-radius: 99px; background: var(--mute-bg); overflow: hidden; }
 .pv-b i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--uva), var(--malva)); }
+
+/* Dentro de la tarjeta, los remedios van sobre el mismo color (sin rectángulo blanco) */
+.pc .pc-meds, .pc.pend .pc-meds, .pc.tarde .pc-meds, .pc.lista .pc-meds { background: none; border-radius: 0; border-top: 1px solid rgba(46, 22, 52, .1); }
+.pc .pc-meds li + li { border-top: 1px solid rgba(46, 22, 52, .08); }
+.pc .md { padding: 12px 2px; }
+.pc.pend .a2, .pc.tarde .a2 { background: rgba(255, 255, 255, .55); }
+.pc.pend .md-c { box-shadow: inset 0 0 0 2px rgba(46, 22, 52, .28); }
+.pc.tarde .md-c { box-shadow: inset 0 0 0 2px rgba(178, 52, 31, .45); }
+
+/* Ronda 3.3 · limpieza: sin círculos ni brillos decorativos */
+.hero::after, .gate::before, .gate::after, .hoy::before,
+.alarm::before, .alarm::after, .alarm .bell::before, .alarm .bell::after,
+.ag.now .ag-tx::before, .et::before, html.phone #vista-cap li::before { display: none !important; content: none !important; }
+.reloj .dot, .al-dot { animation: none !important; box-shadow: none !important; }
+.al-dot { display: none; }
+.semdia.hoy b::after { background: var(--noche); }
+.gate2 { background: var(--noche); }
+.hero { background-image: none; }
