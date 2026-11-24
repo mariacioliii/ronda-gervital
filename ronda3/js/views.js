@@ -2,7 +2,7 @@
 "use strict";
 
 const TABS = [
-  { id: "hoy", t: "Hoy", i: "hoy" },
+  { id: "hoy", t: "Hoy", i: "clock" },
   { id: "personas", t: "Personas", i: "personas" },
   { id: "historial", t: "Historial", i: "historial" },
 ];
@@ -57,7 +57,7 @@ function vShell(content) {
       ${marca("Gervital")}
       <nav aria-label="Secciones">${tabs.map((t) => `${tabBtn(t, "nav")}${t.id === "mas" ? avatar(S.user, "xs") : ic(t.i)}${t.id === "mas" ? "Mi cuenta" : t.t}${t.id === "hoy" && pend ? `<span class="badge">${pend}</span>` : ""}</button>`).join("")}</nav>
       <div class="grow"></div>
-      <div class="reloj js-reloj ${demo ? "demo" : ""}"><span class="dot"></span><span class="js-hora">${nowHM()}</span></div>
+      <div class="reloj js-reloj ${demo ? "demo" : ""}"><span class="js-hora">${nowHM()}</span></div>
     </aside>
     <div class="wrap">
       <main class="page ${ui.tab === "hoy" && !ui.sub ? "" : "narrow"}" id="main">${content}</main>
@@ -82,33 +82,24 @@ function vHoy() {
   if (!S.personas.some((p) => p.activo !== false)) return vSinPersonas();
   const rondas = rondasDe(iso);
   const min = nowMin();
-  const top = `<header class="hoy-top"><div class="grow"><p class="fecha et">${esc(fechaLarga(iso))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div><div class="reloj js-reloj ${Clock.offsetMin ? "demo" : ""}"><span class="dot"></span><span class="js-hora">${nowHM()}</span></div></header>`;
+  const top = `<header class="hoy-top"><div class="grow"><p class="fecha et">${esc(fechaLarga(iso))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div><div class="reloj js-reloj ${Clock.offsetMin ? "demo" : ""}"><span class="js-hora">${nowHM()}</span></div></header>`;
   if (!rondas.length) return `<div class="hoy">${top}<div class="vacio">${MARK}<h3>Hoy no hay medicación</h3></div>${vNoVinieron(iso)}</div>`;
   return vHoyAgenda(rondas, min, top + vHero(rondas, min), iso);
 }
 
-/* Momento del día de una ronda: ícono y nombre */
-function momento(h) { const m = mins(h); return m < 12 * 60 ? ["hoy", "Mañana"] : m < 18 * 60 ? ["tarde", "Tarde"] : ["moon", "Noche"]; }
-
-/* Tarjeta destacada: la ronda que toca (o la próxima) y el avance del día en un círculo */
+/* Tarjeta de arriba: solo la próxima ronda, la hora y quién toma */
 function vHero(rondas, min) {
-  const vis = rondas.flatMap((r) => r.items.filter((t) => estado(t) !== "ausente"));
-  const total = vis.length, hechas = vis.filter((t) => !abiertaT(t)).length;
   const cur = rondaActual(rondas);
   const conPend = (r) => r.items.some((t) => estado(t) !== "ausente" && abiertaT(t));
   const atr = rondas.find((r) => r !== cur && conPend(r) && mins(r.hora) + 15 < min);
   const r = atr || (cur && conPend(cur) ? cur : rondas.find((x) => mins(x.hora) > min && conPend(x)));
-  const pct = total ? hechas / total : 1;
-  const C = 2 * Math.PI * 34;
-  const ring = `<span class="hero-ring" role="img" aria-label="${hechas} de ${total} tomas registradas hoy"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="34" class="bg"/><circle cx="40" cy="40" r="34" class="fg" style="stroke-dasharray:${C.toFixed(1)};stroke-dashoffset:${(C * (1 - pct)).toFixed(1)}"/></svg><span><b class="num">${hechas}</b><small>de ${total}</small></span></span>`;
-  const side = `<span class="hero-side">${ring}<small>tomas de hoy</small></span>`;
-  if (!r) return `<div class="hero listo"><div class="hero-tx"><span class="hero-k">${ic("check", "s")}Hoy</span><b class="hero-t">Todo registrado</b><span class="hero-n">Buen trabajo. No queda ninguna toma pendiente.</span></div>${side}</div>`;
-  const pend = r.items.filter((t) => estado(t) !== "ausente" && abiertaT(t));
-  const nombres = [...new Set(pend.map((t) => primerNombre(t.p.nombre)))];
-  const k = r === atr ? "Quedó atrasada" : r === cur ? "Ronda de ahora" : `Próxima ronda · en ${durTxt(mins(r.hora) - min)}`;
-  return `<button class="hero ${r === atr ? "tarde" : ""}" data-act="irRonda" data-h="${r.hora}">
-    <div class="hero-tx"><span class="hero-k">${ic(momento(r.hora)[0], "s")}${k}</span><b class="hero-t num">${r.hora}</b><span class="hero-n">${esc(nombres.length > 1 ? nombres.slice(0, -1).join(", ") + " y " + nombres[nombres.length - 1] : nombres[0] || "")}</span><span class="hero-q">${plural(pend.length, "toma pendiente", "tomas pendientes")}</span></div>
-    ${side}
+  if (!r) return `<div class="prox-card listo"><span class="prox-k">Hoy</span><b class="prox-t">Todo registrado</b></div>`;
+  const nombres = [...new Set(r.items.filter((t) => estado(t) !== "ausente" && abiertaT(t)).map((t) => primerNombre(t.p.nombre)))];
+  const quien = nombres.length > 1 ? nombres.slice(0, -1).join(", ") + " y " + nombres[nombres.length - 1] : nombres[0] || "";
+  return `<button class="prox-card ${r === atr ? "tarde" : ""}" data-act="irRonda" data-h="${r.hora}">
+    <span class="prox-k">${r === atr ? "Quedó atrasada" : "Próxima"}</span>
+    <b class="prox-t num">${r.hora}</b>
+    <span class="prox-n">${esc(quien)}</span>
   </button>`;
 }
 
@@ -127,11 +118,10 @@ function vHoyAgenda(rondas, min, top, iso) {
     const est = st === "ok" ? `${ic("check", "s")} Todo registrado` : st === "bad" ? "Atrasada" : st === "now" ? "Es ahora" : `En ${durTxt(mins(r.hora) - min)}`;
     const resto = st === "ok" ? plural(hechas, "toma") : abiertas.length === vis.length ? `${plural(vis.length, "toma pendiente", "tomas pendientes")}` : `${hechas} de ${vis.length} · ${abiertas.length === 1 ? "falta 1" : `faltan ${abiertas.length}`}`;
     const pct = vis.length ? Math.round((hechas / vis.length) * 100) : 100;
-    const mo = momento(r.hora);
     return `<section class="ag ${st} ${abierta ? "open" : ""}" style="--i:${ri}" data-ronda="${r.hora}">
       <button class="ag-h" data-act="verRonda" data-h="${r.hora}" data-def="${def ? 1 : ""}" aria-expanded="${abierta}">
         <b class="ag-hora num">${r.hora}</b>
-        <span class="ag-est"><span class="ag-mo">${ic(mo[0], "s")}${mo[1]}</span><span class="ag-tx">${est}</span><span class="ag-n num">${resto}</span></span>
+        <span class="ag-est"><span class="ag-tx">${est}</span><span class="ag-n num">${resto}</span></span>
         <span class="ag-chev">${ic("chevD", "s")}</span>
         <span class="ag-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>
       </button>
@@ -636,7 +626,7 @@ function vAlarm() {
   const a = Alarm.activa; if (!a) return "";
   const ronda = a.kind === "ronda";
   return `<div class="alarm ${ronda ? "" : "atraso"}" role="alertdialog" aria-modal="true" aria-label="${ronda ? "Llegó la ronda" : "Tomas atrasadas"}">
-    <div class="al-top"><span class="al-k"><span class="al-dot"></span>${a.prueba ? "Prueba de alarma" : ronda ? "Ronda de medicación" : "Quedan tomas sin dar"}</span></div>
+    <div class="al-top"><span class="al-k">${a.prueba ? "Prueba de alarma" : ronda ? "Ronda de medicación" : "Quedan tomas sin dar"}</span></div>
     <div class="al-mid">
       <h2 class="num">${esc(a.hora)}</h2>
       <p class="al-q">${ronda ? `${plural(a.personas, "persona")} · ${plural(a.total, "toma")}` : `${plural(a.total, "toma atrasada", "tomas atrasadas")}`}</p>
