@@ -84,7 +84,32 @@ function vHoy() {
   const min = nowMin();
   const top = `<header class="hoy-top"><div class="grow"><p class="fecha et">${esc(fechaLarga(iso))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div><div class="reloj js-reloj ${Clock.offsetMin ? "demo" : ""}"><span class="dot"></span><span class="js-hora">${nowHM()}</span></div></header>`;
   if (!rondas.length) return `<div class="hoy">${top}<div class="vacio">${MARK}<h3>Hoy no hay medicación</h3></div>${vNoVinieron(iso)}</div>`;
-  return vHoyAgenda(rondas, min, top, iso);
+  return vHoyAgenda(rondas, min, top + vHero(rondas, min), iso);
+}
+
+/* Momento del día de una ronda: ícono y nombre */
+function momento(h) { const m = mins(h); return m < 12 * 60 ? ["hoy", "Mañana"] : m < 18 * 60 ? ["tarde", "Tarde"] : ["moon", "Noche"]; }
+
+/* Tarjeta destacada: la ronda que toca (o la próxima) y el avance del día en un círculo */
+function vHero(rondas, min) {
+  const vis = rondas.flatMap((r) => r.items.filter((t) => estado(t) !== "ausente"));
+  const total = vis.length, hechas = vis.filter((t) => !abiertaT(t)).length;
+  const cur = rondaActual(rondas);
+  const conPend = (r) => r.items.some((t) => estado(t) !== "ausente" && abiertaT(t));
+  const atr = rondas.find((r) => r !== cur && conPend(r) && mins(r.hora) + 15 < min);
+  const r = atr || (cur && conPend(cur) ? cur : rondas.find((x) => mins(x.hora) > min && conPend(x)));
+  const pct = total ? hechas / total : 1;
+  const C = 2 * Math.PI * 34;
+  const ring = `<span class="hero-ring" role="img" aria-label="${hechas} de ${total} tomas registradas hoy"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="34" class="bg"/><circle cx="40" cy="40" r="34" class="fg" style="stroke-dasharray:${C.toFixed(1)};stroke-dashoffset:${(C * (1 - pct)).toFixed(1)}"/></svg><span><b class="num">${hechas}</b><small>de ${total}</small></span></span>`;
+  const side = `<span class="hero-side">${ring}<small>tomas de hoy</small></span>`;
+  if (!r) return `<div class="hero listo"><div class="hero-tx"><span class="hero-k">${ic("check", "s")}Hoy</span><b class="hero-t">Todo registrado</b><span class="hero-n">Buen trabajo. No queda ninguna toma pendiente.</span></div>${side}</div>`;
+  const pend = r.items.filter((t) => estado(t) !== "ausente" && abiertaT(t));
+  const nombres = [...new Set(pend.map((t) => primerNombre(t.p.nombre)))];
+  const k = r === atr ? "Quedó atrasada" : r === cur ? "Ronda de ahora" : `Próxima ronda · en ${durTxt(mins(r.hora) - min)}`;
+  return `<button class="hero ${r === atr ? "tarde" : ""}" data-act="irRonda" data-h="${r.hora}">
+    <div class="hero-tx"><span class="hero-k">${ic(momento(r.hora)[0], "s")}${k}</span><b class="hero-t num">${r.hora}</b><span class="hero-n">${esc(nombres.length > 1 ? nombres.slice(0, -1).join(", ") + " y " + nombres[nombres.length - 1] : nombres[0] || "")}</span><span class="hero-q">${plural(pend.length, "toma pendiente", "tomas pendientes")}</span></div>
+    ${side}
+  </button>`;
 }
 
 /* Agenda por horario: cada ronda es un bloque; la de ahora y las atrasadas abiertas.
@@ -102,10 +127,11 @@ function vHoyAgenda(rondas, min, top, iso) {
     const est = st === "ok" ? `${ic("check", "s")} Todo registrado` : st === "bad" ? "Atrasada" : st === "now" ? "Es ahora" : `En ${durTxt(mins(r.hora) - min)}`;
     const resto = st === "ok" ? plural(hechas, "toma") : abiertas.length === vis.length ? `${plural(vis.length, "toma pendiente", "tomas pendientes")}` : `${hechas} de ${vis.length} · ${abiertas.length === 1 ? "falta 1" : `faltan ${abiertas.length}`}`;
     const pct = vis.length ? Math.round((hechas / vis.length) * 100) : 100;
-    return `<section class="ag ${st} ${abierta ? "open" : ""}" style="--i:${ri}">
+    const mo = momento(r.hora);
+    return `<section class="ag ${st} ${abierta ? "open" : ""}" style="--i:${ri}" data-ronda="${r.hora}">
       <button class="ag-h" data-act="verRonda" data-h="${r.hora}" data-def="${def ? 1 : ""}" aria-expanded="${abierta}">
         <b class="ag-hora num">${r.hora}</b>
-        <span class="ag-est"><span class="ag-tx">${est}</span><span class="ag-n num">${resto}</span></span>
+        <span class="ag-est"><span class="ag-mo">${ic(mo[0], "s")}${mo[1]}</span><span class="ag-tx">${est}</span><span class="ag-n num">${resto}</span></span>
         <span class="ag-chev">${ic("chevD", "s")}</span>
         <span class="ag-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>
       </button>
@@ -131,7 +157,7 @@ function vPaciente(g, st, i) {
     else if (e === "pospuesta") tag = `<span class="tg warn">Para las ${esc(t.r.posp)}</span>`;
     const hecho = e === "dada" || e === "nodada";
     const fin = hecho ? `<span class="md-st ${e}">${ic(e === "dada" ? "check" : "nodio", "s")}${e === "dada" ? "La tomó " + esc(t.r?.horaReal || "") : "No la tomó"} · ${esc(primerNombre(staffNombre(t.r?.por)))}</span>` : tag;
-    return `<li class="${hecho ? "hecho " + e : ""}"><button class="md" data-act="sheet" data-s="${hecho ? "editreg" : "otra"}" data-id="${t.id}" data-ids="${t.id}"><span class="md-n"><b>${esc(t.m.nombre)}</b>${t.m.dosis ? ` <span>${esc(t.m.dosis)}</span>` : ""}</span>${t.m.indicacion ? `<span class="md-i">${esc(t.m.indicacion)}</span>` : ""}${fin ? `<span class="md-f">${fin}</span>` : ""}</button></li>`;
+    return `<li class="${hecho ? "hecho " + e : ""}"><button class="md" data-act="sheet" data-s="${hecho ? "editreg" : "otra"}" data-id="${t.id}" data-ids="${t.id}"><span class="md-c ${e}" aria-hidden="true">${e === "dada" ? ic("check", "s") : e === "nodada" ? ic("x", "s") : ""}</span><span class="md-b"><span class="md-n"><b>${esc(t.m.nombre)}</b>${t.m.dosis ? ` <span>${esc(t.m.dosis)}</span>` : ""}</span>${t.m.indicacion ? `<span class="md-i">${esc(t.m.indicacion)}</span>` : ""}${fin ? `<span class="md-f">${fin}</span>` : ""}</span></button></li>`;
   }).join("");
   const nota = p.notas ? `<span class="pc-nota">${esc(p.notas)}</span>` : "";
   const acts = !pend.length ? "" : temprano
@@ -206,7 +232,10 @@ function vPersonas() {
     ${lista.length ? `<div class="list">${lista.map((p) => {
       const ms = medsDe(p.id);
       const hs = horasDe(p);
-      return `<button class="li" data-act="ficha" data-pid="${p.id}">${avatar(p)}<span class="grow"><span class="t">${esc(p.nombre)}</span><span class="d" style="display:block">${ms.length ? `${plural(ms.length, "medicamento")} · ${hs.join(", ")}` : "Sin medicación cargada"}</span><span class="dias-mini" aria-label="${esc(diasTexto(p.dias))}">${DIAS.slice(0, usaSab || (p.dias || []).includes(6) ? 6 : 5).map((d) => `<i class="${(p.dias || []).includes(d.n) ? "on" : ""}">${d.c}</i>`).join("")}</span></span>${ic("chevR", "s chev")}</button>`;
+      const th = asisteEl(p, today()) && !ausente(today(), p.id) ? tomasDe(today()).filter((t) => t.p.id === p.id) : [];
+      const thOk = th.filter((t) => !abiertaT(t)).length;
+      const av = th.length ? `<span class="pv"><span class="pv-t num">Hoy ${thOk} de ${th.length}</span><span class="pv-b"><i style="width:${Math.round((thOk / th.length) * 100)}%"></i></span></span>` : "";
+      return `<button class="li" data-act="ficha" data-pid="${p.id}">${avatar(p)}<span class="grow"><span class="t">${esc(p.nombre)}</span>${av}<span class="d" style="display:block">${ms.length ? `${plural(ms.length, "medicamento")} · ${hs.join(", ")}` : "Sin medicación cargada"}</span><span class="dias-mini" aria-label="${esc(diasTexto(p.dias))}">${DIAS.slice(0, usaSab || (p.dias || []).includes(6) ? 6 : 5).map((d) => `<i class="${(p.dias || []).includes(d.n) ? "on" : ""}">${d.c}</i>`).join("")}</span></span>${ic("chevR", "s chev")}</button>`;
     }).join("")}</div>` : `<div class="empty"><div>${MARK}</div><h3>${q ? "No encontramos a nadie con ese nombre" : !F.act ? "No hay personas dadas de baja" : dia ? `El ${DIA_NOMBRE[dia].toLowerCase()} no viene nadie` : "Todavía no hay personas"}</h3>${F.act && !q && !dia ? `<p>Agregá a la primera o importá la planilla.</p><button class="btn sec" data-act="sub" data-sub="importar">${ic("sheet")} Importar planilla</button>` : ""}</div>`}
     ${F.act && ina.length ? `<button class="link small" style="margin-top:18px" data-act="pfAct" data-v="0">Ver dadas de baja (${ina.length})</button>` : ""}`;
 }
