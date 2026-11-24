@@ -216,6 +216,7 @@ const A = {
   darTodasOk() {
     const ids = ui.sheet.ids;
     ids.forEach((id, i) => darToma(id, null, i > 0)); marcarRecien(ids);
+    try { navigator.vibrate && navigator.vibrate(30); } catch (e) {}
     const t = tomaPorId(ids[0]);
     ui.sheet = null;
     toast(`Listo: ${primerNombre(t.p.nombre)} tomó ${ids.length > 1 ? plural(ids.length, "medicamento") : t.m.nombre} a las ${nowHM()}`);
@@ -264,6 +265,7 @@ const A = {
     const p = persona(d.pid); const iso = today(); const on = !ausente(iso, p.id);
     if (on && !d.ok) { openSheet("confirmar", { pid: p.id, tipo: "novino" }); return; }
     setAusencia(iso, p.id, on);
+    try { on && navigator.vibrate && navigator.vibrate(30); } catch (e) {}
     ui.sheet = null;
     toast(on ? `Anotado: ${primerNombre(p.nombre)} no vino hoy` : `${primerNombre(p.nombre)} sí vino hoy`);
   },
