@@ -113,7 +113,7 @@ const Alarm = {
       kvSet("alarmas-posp-" + today(), posp.filter((y) => y !== x));
       const r = rondas.find((y) => y.hora === x.hora);
       const pend = r ? r.items.filter((t) => abierta(estado(t))) : [];
-      if (pend.length) { this.disparar(x.kind, r, pend); return; }
+      if (pend.length) { this.disparar(x.kind, r, pend, true); return; }
     }
     for (const r of rondas) {
       const h = mins(r.hora);
@@ -128,8 +128,8 @@ const Alarm = {
       }
     }
   },
-  disparar(kind, r, items) {
-    this.activa = { kind, hora: r.hora, total: items.length, personas: new Set(items.map((t) => t.p.id)).size, nombres: [...new Set(items.map((t) => primerNombre(t.p.nombre)))] };
+  disparar(kind, r, items, pospuesta) {
+    this.activa = { kind, pospuesta: !!pospuesta, hora: r.hora, total: items.length, personas: new Set(items.map((t) => t.p.id)).size, nombres: [...new Set(items.map((t) => primerNombre(t.p.nombre)))] };
     Sound.play(kind);
     notificar(kind === "ronda" ? `Ronda de las ${r.hora}` : `Quedan tomas de las ${r.hora} sin dar`,
       kind === "ronda" ? `${plural(this.activa.personas, "persona")} · ${plural(this.activa.total, "toma")}: ${this.activa.nombres.join(", ")}` : `${plural(this.activa.total, "toma")} atrasada${this.activa.total === 1 ? "" : "s"}: ${this.activa.nombres.join(", ")}`);
