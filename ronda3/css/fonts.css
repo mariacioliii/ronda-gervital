@@ -1,0 +1,3 @@
+/* Tipografía incluida en la app (licencia SIL Open Font) para que funcione sin internet.
+   Instrument Sans, la misma de la web de Gervital. */
+@font-face { font-family: "Instrument Sans"; font-style: normal; font-weight: 400 700; font-display: swap; src: url(../fonts/instrument-sans.woff2) format("woff2"); }
