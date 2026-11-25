@@ -1,0 +1,15 @@
+{
+  "name": "ronda-gervital-android",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Ronda (Gervital) como app de Android con alarma real",
+  "scripts": {
+    "web": "node scripts/preparar-web.mjs",
+    "sync": "node scripts/preparar-web.mjs && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.2",
+    "@capacitor/cli": "8.6.2",
+    "@capacitor/core": "8.6.2"
+  }
+}
