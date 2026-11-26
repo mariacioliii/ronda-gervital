@@ -1233,3 +1233,41 @@ html.w980 .hoy::before { left: -36px; right: -36px; top: -28px; }
 .resumen > div { display: flex; flex-direction: column; justify-content: flex-start; gap: 2px; padding: 16px 18px; min-height: 104px; margin: 0; box-sizing: border-box; }
 .resumen .cero { background: var(--surface-2, #F5F2F6); }
 .resumen .cero b { color: var(--ink-2); }
+
+/* Ronda 3.7 · auditoría: menos ruido, más legible */
+/* Contraste: el gris más claro pasa a 4.6:1 sobre blanco */
+:root { --ink-3: #74667A; }
+/* Sin etiquetas en mayúsculas espaciadas: frase normal, peso medio */
+.eyebrow, .et, .drawer .kv > span, .alarm .k, .al-k, .marca small { text-transform: none; letter-spacing: 0; }
+.eyebrow { font-size: 15px; font-weight: 500; color: var(--ink-2); }
+.drawer .kv > span { font-size: 15px; font-weight: 500; color: var(--ink-2); }
+.hoy-top .fecha.et { font-size: 15px; color: var(--uva); }
+.al-k { font-size: 15px; }
+.marca small { font-weight: 500; font-size: 12px; }
+/* La hora ya está en el celular: el reloj del encabezado sobra (en PC queda en la barra lateral) */
+.hoy-top .reloj { display: none; }
+/* Estados: el texto y el color alcanzan, sin punto */
+.st::before { display: none; }
+.st { gap: 0; }
+/* Ficha de persona: formulario sin caja alrededor y los seis días en una fila */
+.pform { padding: 0; }
+.pform .field:first-child { margin-top: 4px; }
+.dsel { display: grid; grid-template-columns: repeat(6, minmax(0, 52px)); gap: 8px; }
+.dsel button { width: 100%; height: auto; aspect-ratio: 1; }
+.vacio-med { margin: 0; padding: 4px 2px 0; color: var(--ink-2); font-size: 16px; line-height: 1.45; }
+/* Login: una sola marca */
+.g-nombre { display: block; color: #fff; font: 500 20px/1 var(--font); letter-spacing: -.02em; margin-top: 14px; text-align: center; }
+/* Corregir: área de toque suficiente */
+.md-edit { min-height: 36px; display: inline-flex; align-items: center; padding: 0 14px; }
+/* PC: el botón de vista no tapa la última tarjeta */
+html.w980 #main { padding-bottom: 110px; }
+/* Pantallas angostas (320–359 px): las cápsulas se achican y el historial respira */
+@media (max-width: 359px) {
+  .prox-anim { width: 72px; right: 6px; }
+  .prox-anim .w3 { display: none; }
+  .prox-card .prox-n { max-width: calc(100% - 56px); }
+  .prox-card .prox-t { font-size: 56px; }
+  .hrow { grid-template-columns: 52px 1fr; }
+  .hrow .st { grid-column: 2; justify-self: start; margin-top: 6px; }
+}
+.ult-no { color: var(--rojo); font-weight: 500; }
