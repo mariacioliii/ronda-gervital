@@ -1321,3 +1321,107 @@ h1, h2, h3, .h1, .h2, .h3, .hoy-top h1, .g-card h1, .marca b, .resumen b { lette
 .prox-t, .alarm h2, .ag-h .ag-hora { letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .prox-t { font-weight: 500; }
 .alarm h2 { font-weight: 500; }
+
+/* =========================================================================
+   Ronda 3.9 · sistema plano
+   Referencias: Headspace (profundidad por bloques de color, no por sombras),
+   Streaks (una acción grande por ítem y el cierre del día celebrado), Apple Salud
+   (tomada / no tomada con la hora registrada, posponer 10 min).
+   Reglas: colores planos y tonos de la marca; transparencias con intención;
+   sin degradados, glow, desenfoques ni sombras grandes. Una sola sombra chica
+   (--sombra) para lo que flota sobre el contenido.
+   ========================================================================= */
+:root {
+  --sombra: 0 2px 8px rgba(46, 22, 52, .12);
+  --uva-osc: #6A2F73;
+  --amar: #FFF2C7;      /* por dar */
+  --amar-claro: #FFF8E1; /* más tarde */
+  --coral: #FBD9D1;     /* atrasada */
+  --rosa: #FBEBE8;      /* no la tomó */
+  --verde: #E3F1E8;     /* lista */
+  --shadow: none;
+}
+/* Sin desenfoques ni brillos */
+*, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.hoy::before, .gate::before, .gate::after, .a-dar::after { display: none !important; }
+
+/* Superficies planas */
+.prox-card { background: var(--uva-osc); box-shadow: none; }
+.prox-card.tarde { background: #A8301F; }
+.prox-card.listo { background: var(--ok); }
+.pc, .pc.pend { background: var(--amar); box-shadow: none; }
+.pc.tarde { background: var(--coral); }
+.pc.falta { background: var(--amar-claro); }
+.pc.lista { background: var(--verde); }
+.pc.nolatomo { background: var(--rosa); }
+.pc.recien::before { background: var(--amar); }
+.resumen .pc2 { background: var(--lila); }
+.gate2 { background: var(--noche); }
+.formbar { background: #fff; box-shadow: 0 -1px 0 var(--line); }
+.ag, .tomas, .pc2, .paso, .card, .list { box-shadow: none; }
+
+/* Sombras: solo lo que flota, y chica */
+.a-dar { box-shadow: none; }
+.tabs { background: var(--noche); box-shadow: var(--sombra); }
+.toast { box-shadow: var(--sombra); }
+.g-card { box-shadow: none; }
+.sheet, .drawer { box-shadow: 0 -2px 12px rgba(46, 22, 52, .1); }
+#vista { box-shadow: var(--sombra); }
+
+/* Cápsulas de la tarjeta de arriba: planas, el volumen lo da el tono de cada mitad */
+.prox-anim .cap { filter: none; }
+.prox-anim .cap b:first-child { background: #FFFFFF; }
+.prox-anim .cap b:last-child { background: #D9A8E1; }
+.prox-anim .w2 .cap b:first-child { background: var(--sol); }
+.prox-anim .w3 .cap b:last-child { background: #EADCEE; }
+.prox-anim .cap b::after { background: #fff; opacity: .5; }
+.prox-anim .w2 .cap b::after, .prox-anim .w3 .cap b::after { opacity: .35; }
+.prox-anim .cap b:first-child::after { opacity: 0; }
+
+/* Ilustraciones: tamaño fijo, entran por partes */
+.ip { display: block; width: 168px; height: auto; margin: 0 auto 14px; overflow: visible; }
+.ip > g, .ip > path { transform-box: fill-box; transform-origin: 50% 100%; }
+.ip .ip-a { animation: ip-sube .5s var(--ease-out) both; }
+.ip .ip-b { animation: ip-sube .5s var(--ease-out) .09s both; }
+.ip .ip-c { animation: ip-sube .55s cubic-bezier(.34, 1.45, .64, 1) .2s both; }
+.ip .ip-tilde { stroke-dasharray: 80; stroke-dashoffset: 80; animation: trazo .5s .25s var(--ease-out) forwards; }
+@keyframes ip-sube { from { opacity: 0; transform: translateY(10px) scale(.96); } }
+#app[data-kv] .ip > * { animation: none !important; stroke-dashoffset: 0; }
+.vacio, .empty { text-align: center; padding: 36px 20px 28px; }
+.vacio h3, .empty h3 { color: var(--ink); font-size: 20px; font-weight: 500; margin: 0 0 6px; }
+.vacio p, .empty p { color: var(--ink-2); font-size: 16px; line-height: 1.45; max-width: 34ch; margin: 0 auto 16px; }
+.prox-card.listo { grid-template-columns: 1fr; }
+.prox-ilu { position: absolute; right: 8px; top: 50%; translate: 0 -50%; width: 132px; pointer-events: none; }
+.prox-ilu .ip { width: 132px; margin: 0; }
+.prox-card.listo .prox-n { max-width: calc(100% - 120px); color: rgba(255, 255, 255, .86); }
+
+/* Progreso de cada ronda: un segmento por toma, verde si la tomó, rojo si no */
+.ag-bar { display: none !important; }
+.ag-seg { display: flex; gap: 3px; margin-top: 7px; max-width: 168px; }
+.ag-seg i { flex: 1; height: 5px; border-radius: 3px; background: rgba(46, 22, 52, .12); transition: background-color .35s ease; }
+.ag-seg i.si { background: var(--ok); }
+.ag-seg i.no { background: var(--rojo); }
+.ag.open .ag-seg { margin-bottom: 2px; }
+
+/* Errores: se ven y se entienden; el campo vacío se marca y tiembla una vez */
+.err { display: flex; gap: 8px; align-items: flex-start; color: var(--rojo); font-weight: 500; animation: tiembla .36s var(--ease-out); }
+.err::before { content: "!"; flex: none; width: 22px; height: 22px; border-radius: 999px; background: var(--rojo); color: #fff; display: grid; place-items: center; font-size: 14px; font-weight: 700; line-height: 1; }
+@keyframes tiembla { 0%, 100% { transform: none; } 25% { transform: translateX(-5px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } }
+input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--rojo) !important; background: #FFF7F5; }
+
+/* Selección: los días y las opciones elegidas dan un pequeño salto */
+.dsel button[aria-pressed="true"] { animation: elige-dia .3s cubic-bezier(.34, 1.5, .64, 1); }
+@keyframes elige-dia { 0% { transform: scale(.9); } 100% { transform: none; } }
+#app[data-kv] .dsel button[aria-pressed="true"] { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ip > *, .err, .dsel button { animation: none !important; stroke-dashoffset: 0 !important; }
+}
+.resumen[hidden] { display: none; }
+.prox-card.listo .prox-t { max-width: calc(100% - 132px); font-size: 32px; line-height: 1.05; }
+.prox-card.listo .prox-n { max-width: calc(100% - 132px); }
+.prox-ilu { right: 10px; width: 128px; }
+.prox-ilu .ip { width: 128px; }
+.empty .btn { margin-top: 14px; }
+.panel { box-shadow: var(--sombra); }
+html.phone #app { box-shadow: 0 0 0 11px #1E1222, 0 0 0 12px #3A2840; }
