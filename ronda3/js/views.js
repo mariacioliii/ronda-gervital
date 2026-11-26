@@ -17,7 +17,7 @@ function vSplash() { return `<div class="splash">${MARK}</div>`; }
 /* Siempre es Gervital. Cada persona entra con el usuario y la contraseña que le dio quien administra.
    Solo la primerísima vez (cuando todavía no hay ninguna cuenta) se crea la de administración. */
 function vGate(body) {
-  return `<div class="gate2"><div class="g-top"><img src="${LOGO_BLANCO}" alt="Gervital"><div class="g-app">${MARK}<b>ronda</b></div></div><div class="g-card">${body}</div></div>`;
+  return `<div class="gate2"><div class="g-top"><img src="${LOGO_BLANCO}" alt="Gervital"><b class="g-nombre">Ronda</b></div><div class="g-card">${body}</div></div>`;
 }
 function vSetup() {
   const f = ui.form || {};
@@ -49,7 +49,7 @@ function vLogin() {
 function vShell(content) {
   const pend = contarPendientes();
   const tabs = [...TABS, { id: "mas", t: "Yo", i: "user" }];
-  const tabBtn = (t, cls) => `<button class="${cls}" data-act="tab" data-tab="${t.id}" ${ui.tab === t.id && !ui.sub ? 'aria-current="page"' : ""}>`;
+  const tabBtn = (t, cls) => `<button class="${cls}" data-act="tab" data-tab="${t.id}" aria-label="${t.id === "mas" ? "Mi cuenta" : t.t}${t.id === "hoy" && pend ? `, ${pend} pendientes` : ""}" ${ui.tab === t.id && !ui.sub ? 'aria-current="page"' : ""}>`;
   const demo = Clock.offsetMin !== 0;
   return `
   <div class="shell ${ui.sub === "persona" ? "editando" : ""}">
@@ -105,7 +105,7 @@ function vHero(rondas, min) {
   const quien = nombres.length > 1 ? nombres.slice(0, -1).join(", ") + " y " + nombres[nombres.length - 1] : nombres[0] || "";
   return `<button class="prox-card ${r === atr ? "tarde" : ""}" data-act="irRonda" data-h="${r.hora}">
     ${r === atr ? "" : vCapsulas()}
-    <span class="prox-k">${r === atr ? "Ronda atrasada" : "Próxima ronda"}</span>
+    <span class="prox-k">${r === atr ? "Ronda atrasada" : r === cur ? "Ronda de ahora" : "Próxima ronda"}</span>
     <b class="prox-t num">${r.hora}</b>
     <span class="prox-n">${esc(quien)}</span>
   </button>`;
@@ -232,10 +232,7 @@ function vPersonas() {
     ${lista.length ? `<div class="list">${lista.map((p) => {
       const ms = medsDe(p.id);
       const hs = horasDe(p);
-      const th = asisteEl(p, today()) && !ausente(today(), p.id) ? tomasDe(today()).filter((t) => t.p.id === p.id) : [];
-      const thOk = th.filter((t) => !abiertaT(t)).length;
-      const av = th.length ? `<span class="pv"><span class="pv-t num">Hoy ${thOk} de ${th.length}</span><span class="pv-b"><i style="width:${Math.round((thOk / th.length) * 100)}%"></i></span></span>` : "";
-      return `<button class="li" data-act="ficha" data-pid="${p.id}">${avatar(p)}<span class="grow"><span class="t">${esc(p.nombre)}</span>${av}<span class="d" style="display:block">${ms.length ? `${plural(ms.length, "medicamento")} · ${hs.join(", ")}` : "Sin medicación cargada"}</span><span class="dias-mini" aria-label="${esc(diasTexto(p.dias))}">${DIAS.slice(0, usaSab || (p.dias || []).includes(6) ? 6 : 5).map((d) => `<i class="${(p.dias || []).includes(d.n) ? "on" : ""}">${d.c}</i>`).join("")}</span></span>${ic("chevR", "s chev")}</button>`;
+      return `<button class="li" data-act="ficha" data-pid="${p.id}">${avatar(p)}<span class="grow"><span class="t">${esc(p.nombre)}</span><span class="d" style="display:block">${esc(diasTexto(p.dias))}</span><span class="d" style="display:block">${ms.length ? `${plural(ms.length, "medicamento")} · ${hs.join(", ")}` : "Sin medicación cargada"}</span></span>${ic("chevR", "s chev")}</button>`;
     }).join("")}</div>` : `<div class="empty"><div>${MARK}</div><h3>${q ? "No encontramos a nadie con ese nombre" : !F.act ? "No hay personas dadas de baja" : dia ? `El ${DIA_NOMBRE[dia].toLowerCase()} no viene nadie` : "Todavía no hay personas"}</h3>${F.act && !q && !dia ? `<p>Agregá a la primera o importá la planilla.</p><button class="btn sec" data-act="sub" data-sub="importar">${ic("sheet")} Importar planilla</button>` : ""}</div>`}
     ${F.act && ina.length ? `<button class="link small" style="margin-top:18px" data-act="pfAct" data-v="0">Ver dadas de baja (${ina.length})</button>` : ""}`;
 }
@@ -258,7 +255,7 @@ function vFicha() {
     <div class="db">
       ${p.notas ? `<div class="kv"><span>A tener en cuenta</span><div>${esc(p.notas)}</div></div>` : ""}
       <div class="kv"><span>Medicación</span>${ms.length ? ms.map((m) => `<div class="dmed"><div class="grow"><b>${esc(m.nombre)}</b> <span class="muted">${esc(m.dosis || "")}</span>${m.indicacion ? `<div class="faint small">${esc(m.indicacion)}</div>` : ""}</div><div class="num" style="font-weight:700;text-align:right">${m.horas.join("<br>")}</div></div>`).join("") : `<div class="muted">Sin medicación cargada.</div>`}</div>
-      ${ult.length ? `<div class="kv"><span>Últimas tomas</span>${ult.map((r) => `<div class="row" style="padding:5px 0"><span class="st ${r.estado}">${ESTADO_TXT[r.estado]}</span><span class="grow small">${esc(r.medNombre || "")}</span><span class="faint xs num">${esc(fechaCorta(r.fecha))} ${esc(r.horaReal || r.hora)}</span></div>`).join("")}</div>` : ""}
+      ${ult.length ? `<div class="kv"><span>Últimas tomas</span>${ult.map((r) => `<div class="row ult" style="padding:7px 0"><span class="grow">${esc(r.medNombre || "")}${r.estado === "nodada" ? ` <span class="ult-no">· No la tomó</span>` : ""}</span><span class="faint xs num">${esc(fechaCorta(r.fecha))} ${esc(r.horaReal || r.hora)}</span></div>`).join("")}</div>` : ""}
       <div class="dacts">
         <button class="btn sec" data-act="editarPersona" data-pid="${p.id}">${ic("edit", "s")} Editar</button>
         ${p.activo !== false && viene ? `<button class="btn line" data-act="ausencia" data-pid="${p.id}">${ic(aus ? "vino" : "ausente", "s")} ${aus ? "Sí vino hoy" : "No vino hoy"}</button>` : `<button class="btn line" data-act="verHist" data-pid="${p.id}">${ic("historial", "s")} Historial</button>`}
@@ -274,7 +271,7 @@ function vPersonaEdit() {
   const nueva = !f.id;
   return `
     <div class="subhead"><button class="iconbtn" data-act="back" aria-label="Volver">${ic("chevL")}</button><h1 class="h2">${nueva ? "Nueva persona" : "Editar a " + esc(primerNombre(f.nombre) || "la persona")}</h1></div>
-    <div class="card pad">
+    <div class="pform">
       <label class="field"><span>Nombre y apellido</span><input type="text" data-f="nombre" value="${esc(f.nombre)}" placeholder="Ej.: Elena Rodríguez"></label>
       <div class="field"><span class="flabel">Días que viene al centro</span><div class="dsel" role="group" aria-label="Días">${DIAS.map((d) => `<button data-act="fDia" data-n="${d.n}" aria-pressed="${f.dias.includes(d.n)}" aria-label="${d.l}">${d.c}</button>`).join("")}</div><span class="hint">${f.dias.length ? esc(diasTexto(f.dias)) : "Tocá los días en que viene"}</span></div>
       <label class="field"><span>A tener en cuenta <i>(opcional)</i></span><textarea data-f="notas" placeholder="Ej.: le cuesta tragar, prefiere tomarla con jugo">${esc(f.notas)}</textarea></label>
@@ -282,7 +279,7 @@ function vPersonaEdit() {
     <div class="section"><h2 class="h3">Medicación en el centro</h2><div class="sp"></div><button class="btn sec sm" data-act="medNuevo">${ic("plus", "s")} Agregar</button></div>
     ${f.meds.filter((m) => !m._del).length ? `<div class="list">${f.meds.map((m, i) => m._del ? "" : `
       <div class="li"><span class="grow"><span class="t">${esc(m.nombre)} <span class="muted" style="font-weight:400">${esc(m.dosis || "")}</span></span><span class="d" style="display:block">${m.horas.join(" · ") || "Sin horario"}${m.indicacion ? " · " + esc(m.indicacion) : ""}</span></span><button class="btn line xs" data-act="medEdit" data-i="${i}">Editar</button></div>`).join("")}</div>`
-      : `<div class="aviso">${ic("pill")}<div>Todavía no tiene medicación. Agregá cada medicamento con su dosis y horario.</div></div>`}
+      : `<p class="vacio-med">Todavía no tiene medicación. Tocá «Agregar» para sumar cada remedio con su dosis y su hora.</p>`}
     ${!nueva ? `<div class="baja card pad">${f.activo !== false
       ? `<div class="grow"><b>Dar de baja</b><p>Si ya no viene al centro, deja de aparecer en las rondas y sus alarmas no suenan. Su historial queda guardado.</p></div><button class="btn danger" data-act="sheet" data-s="baja">${ic("ausente", "s")} Dar de baja</button>`
       : `<div class="grow"><b>Está dada de baja</b><p>No aparece en las rondas. Si vuelve al centro, dala de alta otra vez.</p></div><button class="btn sec" data-act="darAlta">${ic("vino", "s")} Dar de alta</button>`}</div>` : ""}
@@ -314,7 +311,7 @@ function vHistorial() {
       <div class="ok"><b>${dadas}</b><span>Tomadas</span></div>
       <div class="no ${no ? "" : "cero"}"><b>${no}</b><span>No tomadas</span></div>
       <div class="srg ${sr ? "" : "cero"}"><b>${sr}</b><span>Sin registrar</span></div>
-      <div class="pc2"><b>${tot ? Math.round((dadas / tot) * 100) : 0}%</b><span>Tomadas</span></div>
+      <div class="pc2"><b>${tot ? Math.round((dadas / tot) * 100) : 0}%</b><span>De todas las tomas</span></div>
     </div>
     ${fechas.length ? fechas.map((f) => {
       const del = items.filter((x) => x.fecha === f).sort((a, b) => (a.hora || "99").localeCompare(b.hora || "99") || a.p.nombre.localeCompare(b.p.nombre));
@@ -338,7 +335,7 @@ function vMas() {
       ${li("sub", "sheet", "Importar planilla", "", 'data-sub="importar"')}
     </div></div>` : `<div class="grupo"><div class="list">${li("sub", "sound", "Sonido de la alarma", S.cfg.sonido ? "Activado" : "Apagado", 'data-sub="ajustes"')}</div></div>`}
     <div class="grupo"><div class="list">
-      ${li("sheet", "bell", "Probar la alarma", "", 'data-s="probar"')}
+      ${li("sheet", "sound", "Probar la alarma", "", 'data-s="probar"')}
       ${!nativa && Nube.disponible ? li("sheet", "bell", "Alarma con la app cerrada", lsGet("ronda-avisos") && typeof Notification !== "undefined" && Notification.permission === "granted" ? "Activada" : "Desactivada", 'data-s="avisos"') : ""}
       ${!nativa ? li("sheet", "install", "Instalar en este celular", "", 'data-s="install"') : ""}
       ${li("sheet", "key", "Cambiar mi contraseña", "", 'data-s="pin"')}
@@ -516,7 +513,7 @@ function vSheet() {
         <label class="field"><span>Medicamento</span><input type="text" data-fm="nombre" value="${esc(m.nombre)}" placeholder="Ej.: Losartán"></label>
         <div class="row" style="gap:10px;flex-wrap:wrap"><label class="field grow" style="min-width:140px"><span>Dosis</span><input type="text" data-fm="dosis" value="${esc(m.dosis)}" placeholder="Ej.: 50 mg"></label>
         <label class="field grow" style="min-width:200px"><span>Indicación (opcional)</span><input type="text" data-fm="indicacion" value="${esc(m.indicacion)}" placeholder="Ej.: con el desayuno"></label></div>
-        <div class="field"><span class="flabel">${m.horas.length ? "Horarios en el centro" : "Hora en el centro"}</span>${m.horas.length ? `<div class="horas">${m.horas.map((h, i) => `<span class="hora-chip num">${h}<button data-act="medHoraDel" data-i="${i}" aria-label="Quitar ${h}">${ic("x", "s")}</button></span>`).join("")}</div>` : ""}<div class="hora-add"><input type="time" class="num" data-fm="nuevaHora" value="${esc(m.nuevaHora || "")}" aria-label="Hora">${m.horas.length ? `<button class="btn sec sm" data-act="medHoraAdd">${ic("plus", "s")} Sumar esta hora</button>` : `<button class="link sm" data-act="medHoraAdd">${ic("plus", "s")} Toma a otra hora también</button>`}</div><span class="hint">Viene en 12:00. Tocala para cambiarla.</span></div>
+        <div class="field"><span class="flabel">${m.horas.length ? "Horarios en el centro" : "Hora en el centro"}</span>${m.horas.length ? `<div class="horas">${m.horas.map((h, i) => `<span class="hora-chip num">${h}<button data-act="medHoraDel" data-i="${i}" aria-label="Quitar ${h}">${ic("x", "s")}</button></span>`).join("")}</div>` : ""}<div class="hora-add"><input type="time" class="num" data-fm="nuevaHora" value="${esc(m.nuevaHora || "")}" aria-label="Hora">${m.horas.length ? `<button class="btn sec sm" data-act="medHoraAdd">${ic("plus", "s")} Sumar esta hora</button>` : `<button class="link sm" data-act="medHoraAdd">${ic("plus", "s")} Toma a otra hora también</button>`}</div><span class="hint">Tocá la hora para cambiarla.</span></div>
         ${ui.medErr ? `<p class="err">${esc(ui.medErr)}</p>` : ""}`;
       acts = `${m._nuevo ? `<button class="btn line" data-act="closeSheet">Cancelar</button>` : `<button class="btn danger" data-act="medQuitar">${ic("trash", "s")} Quitar</button>`}<button class="btn" data-act="medGuardar">Listo</button>`;
       break;
