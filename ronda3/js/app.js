@@ -196,6 +196,7 @@ const A = {
   ronda(d) { ui.ronda = d.h; toTop(); },
   irRonda(d) { ui.ag = ui.ag || {}; ui.ag[d.h] = true; ui.scrollTo = d.h; },
   verRonda(d) { ui.ag = ui.ag || {}; const cur = d.h in ui.ag ? ui.ag[d.h] : !!d.def; ui.ag[d.h] = !cur; },
+  limpiarBusqueda() { ui.pf.q = ""; },
   pfAct(d) { ui.pf.act = d.v === "1"; toTop(); },
   pfDia(d) { ui.pf.dia = d.n ? +d.n : null; },
   hf(d) { ui.hf[d.k] = d.v; },
@@ -219,7 +220,8 @@ const A = {
     try { navigator.vibrate && navigator.vibrate(30); } catch (e) {}
     const t = tomaPorId(ids[0]);
     ui.sheet = null;
-    toast(`Listo: ${primerNombre(t.p.nombre)} tomó ${ids.length > 1 ? plural(ids.length, "medicamento") : t.m.nombre} a las ${nowHM()}`);
+    const completa = t.fecha === today() && tomasDe(today()).filter((x) => x.hora === t.hora && estado(x) !== "ausente").every((x) => !abiertaT(x));
+    toast(completa ? `Ronda de las ${t.hora} completa` : `Listo: ${primerNombre(t.p.nombre)} tomó ${ids.length > 1 ? plural(ids.length, "medicamento") : t.m.nombre} a las ${nowHM()}`);
   },
   guardarCuando(d) {
     const h = normHora(ui.form.horaReal); if (!h) return;
@@ -302,7 +304,7 @@ const A = {
   medQuitar() { const m = ui.form.med; ui.form.meds[m._i]._del = true; delete ui.form.med; ui.sheet = null; },
   guardarPersona() {
     const f = ui.form;
-    if (!f.nombre.trim()) { ui.formErr = "Escribí el nombre de la persona."; return; }
+    if (!f.nombre.trim()) { ui.formErr = "Escribí el nombre de la persona."; toTop(); return; }
     if (!f.dias.length) { ui.formErr = "Elegí al menos un día en que viene al centro."; return; }
     const nueva = !f.id;
     const p = { id: f.id || uid("p-"), nombre: f.nombre.trim(), dias: f.dias, notas: (f.notas || "").trim(), activo: f.activo !== false, creado: f.creado || Date.now(), desde: f.desde || (nueva ? today() : undefined) };
