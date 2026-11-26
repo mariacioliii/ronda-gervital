@@ -48,6 +48,7 @@ function vLogin() {
 /* ---------- Estructura con navegación ---------- */
 function vShell(content) {
   const pend = contarPendientes();
+  const bump = typeof vShell.prev === "number" && pend !== vShell.prev; vShell.prev = pend;
   const tabs = [...TABS, { id: "mas", t: "Yo", i: "user" }];
   const tabBtn = (t, cls) => `<button class="${cls}" data-act="tab" data-tab="${t.id}" aria-label="${t.id === "mas" ? "Mi cuenta" : t.t}${t.id === "hoy" && pend ? `, ${pend} pendientes` : ""}" ${ui.tab === t.id && !ui.sub ? 'aria-current="page"' : ""}>`;
   const demo = Clock.offsetMin !== 0;
@@ -55,14 +56,14 @@ function vShell(content) {
   <div class="shell ${ui.sub === "persona" ? "editando" : ""}">
     <aside class="side">
       ${marca("Gervital")}
-      <nav aria-label="Secciones">${tabs.map((t) => `${tabBtn(t, "nav")}${t.id === "mas" ? avatar(S.user, "xs") : ic(t.i)}${t.id === "mas" ? "Mi cuenta" : t.t}${t.id === "hoy" && pend ? `<span class="badge">${pend}</span>` : ""}</button>`).join("")}</nav>
+      <nav aria-label="Secciones">${tabs.map((t) => `${tabBtn(t, "nav")}${t.id === "mas" ? avatar(S.user, "xs") : ic(t.i)}${t.id === "mas" ? "Mi cuenta" : t.t}${t.id === "hoy" && pend ? `<span class="badge ${bump ? "bump" : ""}">${pend}</span>` : ""}</button>`).join("")}</nav>
       <div class="grow"></div>
       <div class="reloj js-reloj ${demo ? "demo" : ""}"><span class="js-hora">${nowHM()}</span></div>
     </aside>
     <div class="wrap">
       <main class="page ${ui.tab === "hoy" && !ui.sub ? "" : "narrow"}" id="main">${content}</main>
     </div>
-    <nav class="tabs" aria-label="Secciones">${tabs.map((t) => `${tabBtn(t, "tab")}<span class="ico">${t.id === "mas" ? avatar(S.user, "xs") : ic(t.i)}${t.id === "hoy" && pend ? `<span class="badge">${pend}</span>` : ""}</span>${t.t}</button>`).join("")}</nav>
+    <nav class="tabs" aria-label="Secciones">${tabs.map((t) => `${tabBtn(t, "tab")}<span class="ico">${t.id === "mas" ? avatar(S.user, "xs") : ic(t.i)}${t.id === "hoy" && pend ? `<span class="badge ${bump ? "bump" : ""}">${pend}</span>` : ""}</span>${t.t}</button>`).join("")}</nav>
   </div>`;
 }
 function contarPendientes() {
@@ -168,7 +169,7 @@ function vPaciente(g, st, i) {
       </div>`;
   const algunaNo = g.tomas.some((t) => estado(t) === "nodada");
   const tono = !pend.length ? (algunaNo ? "nolatomo" : "lista") : temprano ? "pend falta" : prev || pend.some((t) => estado(t) === "atrasada") ? "tarde" : "pend";
-  return `<article class="pc ${tono} ${recien ? "recien" : ""}" style="--i:${i}">
+  return `<article class="pc ${tono} ${recien ? "recien" : ""}" data-pid="${p.id}" style="--i:${i}">
     <button class="pc-who" data-act="ficha" data-pid="${p.id}">${avatar(p)}<span class="pc-nm"><b>${esc(p.nombre)}</b>${nota}</span>${pend.length ? `<span class="pc-tag">${tono === "tarde" ? "Atrasada" : temprano ? `A las ${esc(g.tomas[0].hora)}` : "Pendiente"}</span>` : ""}${!pend.length ? (algunaNo ? `<span class="pc-tag no">No la tomó</span>` : `<span class="pc-ok" aria-label="Lista">${ic("check", "s")}</span>`) : ""}</button>
     <ul class="pc-meds">${meds}</ul>
     ${acts}
@@ -663,5 +664,5 @@ function vAlarm() {
 
 function vToast() {
   if (!ui.toast) return "";
-  return `<div class="toast ${ui.toast.kind || ""}" role="status" aria-live="polite"><div class="grow">${esc(ui.toast.msg)}</div>${ui.toast.undo ? `<button class="btn sm" data-act="undo">${ic("undo", "s")} Deshacer</button>` : ""}</div>`;
+  return `<div class="toast ${ui.toast.kind || ""}" role="status" aria-live="polite"><span class="t-ic" aria-hidden="true">${ic("check", "s")}</span><div class="grow">${esc(ui.toast.msg)}</div>${ui.toast.undo ? `<button class="btn sm" data-act="undo">${ic("undo", "s")} Deshacer</button>` : ""}</div>`;
 }

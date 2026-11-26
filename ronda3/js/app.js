@@ -232,7 +232,7 @@ const A = {
   guardarNodio(d) {
     const f = ui.form; const ids = ui.sheet.ids || [d.id];
     ids.forEach((id, i) => { const t = tomaPorId(id); setReg(id, { ...regBase(t), estado: "nodada", motivo: f.motivo, nota: f.nota || "", horaReal: nowHM(), posp: null }, { join: i > 0 }); });
-    const t = tomaPorId(ids[0]);
+    const t = tomaPorId(ids[0]); marcarRecien(ids);
     ui.sheet = null; ui.form = null;
     toast(`Anotado: ${primerNombre(t.p.nombre)} no tomó ${ids.length > 1 ? plural(ids.length, "medicamento") : t.m.nombre}`, true);
   },
@@ -250,7 +250,7 @@ const A = {
     const data = { ...regBase(t), estado: f.estado, horaReal: f.estado === "dada" ? h : (t.r?.horaReal || nowHM()), motivo: f.estado === "nodada" ? f.motivo : "", nota: f.nota || "", posp: null };
     if (t.r && (t.r.estado === "dada" || t.r.estado === "nodada")) setReg(d.id, data, { edit: true });
     else setReg(d.id, { ...data, tardio: t.fecha < today() || estado(t) === "sinreg" });
-    ui.sheet = null; ui.form = null;
+    ui.sheet = null; ui.form = null; marcarRecien([d.id]);
     toast("Registro guardado", true);
   },
   borrarReg(d) {
@@ -519,9 +519,51 @@ document.addEventListener("click", async (ev) => {
   if (!A[act]) return;
   if (act !== "scrim") ev.preventDefault();
   if (act === "scrim" && ev.target !== el) return;
-  await A[act](el.dataset, el, ev);
-  render();
+  await conRespuesta(act, el, ev);
 });
+
+/* ---------- Respuesta visual a cada acción ----------
+   Confirmar muestra el tilde antes de cerrar; las hojas y la ficha salen deslizando;
+   «No vino» pliega la tarjeta; las pestañas se deslizan con View Transitions. */
+const sinMovimiento = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+const EASE = "cubic-bezier(.32,.72,0,1)";
+async function conRespuesta(act, el, ev) {
+  const quieto = sinMovimiento();
+  if (act === "tab" && document.startViewTransition && !quieto && el.dataset.tab !== ui.tab) {
+    document.startViewTransition(() => { A.tab(el.dataset, el, ev); render(); });
+    return;
+  }
+  const confirma = act === "darTodasOk" || (act === "ausencia" && el.dataset.ok);
+  if (confirma && !quieto) {
+    el.classList.add("fb-ok");
+    try { navigator.vibrate && navigator.vibrate(30); } catch (e) {}
+    await espera(380);
+  }
+  const habiaHoja = !!ui.sheet, habiaFicha = !!ui.ficha;
+  const pidSale = act === "ausencia" && el.dataset.ok ? el.dataset.pid : null;
+  await A[act](el.dataset, el, ev);
+  if (!quieto) {
+    const anims = [];
+    const sh = $(".sheet"), sc = $(".scrim");
+    if (habiaHoja && !ui.sheet && sh) {
+      anims.push(sh.animate([{ transform: "translateY(0)" }, { transform: "translateY(105%)" }], { duration: 240, easing: EASE, fill: "forwards" }).finished);
+      if (sc) anims.push(sc.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, easing: "ease", fill: "forwards" }).finished);
+    }
+    const dr = $(".drawer"), ds = $(".drawer-scrim");
+    if (habiaFicha && !ui.ficha && dr) {
+      anims.push(dr.animate([{ transform: "none" }, { transform: innerWidth >= 980 ? "translateX(105%)" : "translateY(105%)" }], { duration: 260, easing: EASE, fill: "forwards" }).finished);
+      if (ds) anims.push(ds.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, fill: "forwards" }).finished);
+    }
+    const card = pidSale && document.querySelector(`.pc[data-pid="${pidSale}"]`);
+    if (card) {
+      const h = card.offsetHeight;
+      anims.push(card.animate([{ height: h + "px", opacity: 1, transform: "none", marginTop: getComputedStyle(card).marginTop }, { height: "0px", opacity: 0, transform: "translateX(24px) scale(.98)", marginTop: "0px", paddingTop: "0px", paddingBottom: "0px" }], { duration: 320, easing: EASE, fill: "forwards" }).finished);
+    }
+    if (anims.length) await Promise.all(anims).catch(() => {});
+  }
+  render();
+}
 document.addEventListener("input", (ev) => {
   lastActivity = Date.now();
   const el = ev.target, d = el.dataset;
