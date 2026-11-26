@@ -41,8 +41,8 @@
   --r-sm: 12px;
   --shadow: none;
   --shadow-up: 0 -10px 40px -16px rgba(46, 22, 52, .28);
-  --font: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --marca: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font: "Bricolage Grotesque", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --marca: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --ease-out: cubic-bezier(.23, 1, .32, 1);
   --ease-drawer: cubic-bezier(.32, .72, 0, 1);
   --tab-h: 84px;
@@ -1271,3 +1271,53 @@ html.w980 #main { padding-bottom: 110px; }
   .hrow .st { grid-column: 2; justify-self: start; margin-top: 6px; }
 }
 .ult-no { color: var(--rojo); font-weight: 500; }
+
+/* Ronda 3.8 · respuesta visual: cada acción se ve */
+/* Confirmar: el botón se vuelve verde con un tilde que se dibuja antes de cerrar */
+.btn.fb-ok { background: var(--ok) !important; color: #fff !important; transition: background-color .2s ease; }
+.btn.rojo.fb-ok { background: var(--rojo) !important; }
+.btn.fb-ok svg path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: trazo .32s var(--ease-out) forwards; }
+.btn.fb-ok svg { animation: tilde-in .3s cubic-bezier(.34, 1.5, .64, 1) both; }
+
+/* Tarjeta recién registrada: el color nuevo entra desde la izquierda, como si se llenara */
+.pc.recien { animation: none; isolation: isolate; }
+.pc.recien::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: linear-gradient(160deg, var(--amar) 0%, var(--amar-2) 100%);
+  animation: llena .6s cubic-bezier(.65, 0, .35, 1) .08s both; }
+@keyframes llena { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 0 100%); } }
+.pc.recien .md-c.dada, .pc.recien .md-c.nodada { animation: tilde-in .42s cubic-bezier(.34, 1.5, .64, 1) .18s both; }
+.pc.recien .md-c svg path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: trazo .4s .3s var(--ease-out) forwards; }
+.pc.recien .md-st, .pc.recien .md-edit { animation: entra-suave .4s var(--ease-out) .35s both; }
+.pc.recien .pc-ok, .pc.recien .pc-tag.no { animation: tilde-in .45s cubic-bezier(.34, 1.5, .64, 1) .3s both; }
+@keyframes entra-suave { from { opacity: 0; transform: translateY(4px); } }
+
+/* Aviso de abajo: entra con un pequeño rebote y su tilde se dibuja */
+.toast { animation: toast-in .42s cubic-bezier(.34, 1.36, .64, 1) both; padding-left: 14px; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 18px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0); } }
+.t-ic { flex: none; width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; background: var(--ok); color: #fff; }
+.t-ic svg { width: 17px; height: 17px; }
+.t-ic svg path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: trazo .35s .15s var(--ease-out) forwards; }
+#app[data-kt] .toast, #app[data-kt] .t-ic svg path { animation: none !important; stroke-dashoffset: 0; }
+
+/* El número de pendientes salta cuando cambia */
+.badge.bump { animation: bump .45s cubic-bezier(.34, 1.6, .64, 1); }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+/* Pestañas: la píldora blanca viaja de una a otra */
+.tab[aria-current="page"] { view-transition-name: tab-activa; }
+::view-transition-group(tab-activa) { animation-duration: .38s; animation-timing-function: cubic-bezier(.32, .72, 0, 1); }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .2s; }
+
+/* Opciones elegidas (motivo, hora): marca con un leve pulso */
+.opt[aria-pressed="true"] { animation: elige .3s var(--ease-out); }
+@keyframes elige { 0% { transform: scale(.98); } 100% { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pc.recien::before { animation: none; display: none; }
+  .btn.fb-ok svg, .btn.fb-ok svg path, .t-ic svg path, .badge.bump, .toast { animation: none !important; stroke-dashoffset: 0; }
+}
+/* Bricolage Grotesque es más ancha y apretada en grande: menos tracking negativo, y las horas con números de ancho fijo */
+h1, h2, h3, .h1, .h2, .h3, .hoy-top h1, .g-card h1, .marca b, .resumen b { letter-spacing: -.02em; }
+.prox-t, .alarm h2, .ag-h .ag-hora { letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.prox-t { font-weight: 500; }
+.alarm h2 { font-weight: 500; }

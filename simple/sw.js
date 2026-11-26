@@ -1,7 +1,7 @@
 /* Ronda · Gervital — funciona sin internet */
 const CACHE = "ronda-simple-v4";
 const SHELL = [
-  "./", "index.html", "manifest.webmanifest", "css/app.css", "css/fonts.css", "fonts/instrument-sans.woff2",
+  "./", "index.html", "manifest.webmanifest", "css/app.css", "css/fonts.css", "fonts/bricolage-grotesque.woff2",
   "js/util.js", "js/db.js", "js/store.js", "js/nube.js", "js/icons.js", "js/seed.js", "js/alarm.js", "js/views.js", "js/app.js",
   "img/logo-blanco-480.png", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-32.png", "icons/apple-touch-icon.png",
 ];
