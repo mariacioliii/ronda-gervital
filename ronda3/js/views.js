@@ -66,6 +66,13 @@ function vShell(content) {
     <nav class="tabs" aria-label="Secciones">${TABS.map((t) => `${tabBtn(t, "tab")}<span class="ico">${t.id === "mas" ? avatar(S.user, "xs") : ic(t.i)}${t.id === "hoy" && pend ? `<span class="badge ${bump ? "bump" : ""}">${pend}</span>` : ""}</span>${t.t}</button>`).join("")}</nav>
   </div>`;
 }
+/* Selector de hora en rueda (24 h, minutos de 5 en 5), como en las apps de alarma */
+function vRueda(val) {
+  const [h, m] = (normHora(val) || "12:00").split(":").map(Number);
+  const mm = (Math.round(m / 5) * 5) % 60;
+  const col = (n, step, sel, k, lab) => `<div class="rd-col" data-rd="${k}" tabindex="0" role="listbox" aria-label="${lab}">${Array.from({ length: n / step }, (_, i) => i * step).map((v) => `<div class="rd-it ${v === sel ? "on" : ""}" role="option" aria-selected="${v === sel}" data-v="${v}">${String(v).padStart(2, "0")}</div>`).join("")}</div>`;
+  return `<div class="rueda num"><div class="rd-sel" aria-hidden="true"></div>${col(24, 1, h, "h", "Hora")}<span class="rd-dos" aria-hidden="true">:</span>${col(60, 5, mm, "m", "Minutos")}</div>`;
+}
 /* Perfil arriba a la derecha, como en las apps del celular */
 function vPerfilBtn() { return `<button class="perfil-btn" data-act="tab" data-tab="mas" aria-label="Mi cuenta">${avatar(S.user, "sm")}</button>`; }
 function contarPendientes() {
@@ -516,7 +523,7 @@ function vSheet() {
         <label class="field"><span>Medicamento</span><input type="text" data-fm="nombre" value="${esc(m.nombre)}" placeholder="Ej.: Losartán"></label>
         <div class="row" style="gap:10px;flex-wrap:wrap"><label class="field grow" style="min-width:140px"><span>Dosis</span><input type="text" data-fm="dosis" value="${esc(m.dosis)}" placeholder="Ej.: 50 mg"></label>
         <label class="field grow" style="min-width:200px"><span>Indicación (opcional)</span><input type="text" data-fm="indicacion" value="${esc(m.indicacion)}" placeholder="Ej.: con el desayuno"></label></div>
-        <div class="field"><span class="flabel">${m.horas.length ? "Horarios en el centro" : "Hora en el centro"}</span>${m.horas.length ? `<div class="horas">${m.horas.map((h, i) => `<span class="hora-chip num">${h}<button data-act="medHoraDel" data-i="${i}" aria-label="Quitar ${h}">${ic("x", "s")}</button></span>`).join("")}</div>` : ""}<div class="hora-add"><input type="time" class="num" data-fm="nuevaHora" value="${esc(m.nuevaHora || "")}" aria-label="Hora">${m.horas.length ? `<button class="btn sec sm" data-act="medHoraAdd">${ic("plus", "s")} Sumar esta hora</button>` : `<button class="link sm" data-act="medHoraAdd">${ic("plus", "s")} Toma a otra hora también</button>`}</div><span class="hint">Tocá la hora para cambiarla.</span></div>
+        <div class="field"><span class="flabel">${m.horas.length ? "Horarios en el centro" : "Hora en el centro"}</span>${m.horas.length ? `<div class="horas">${m.horas.map((h, i) => `<span class="hora-chip num">${h}<button data-act="medHoraDel" data-i="${i}" aria-label="Quitar ${h}">${ic("x", "s")}</button></span>`).join("")}</div>` : ""}<div class="hora-add">${vRueda(m.nuevaHora)}${m.horas.length ? `<button class="btn sec sm" data-act="medHoraAdd">${ic("plus", "s")} Sumar esta hora</button>` : `<button class="link sm" data-act="medHoraAdd">${ic("plus", "s")} Toma a otra hora también</button>`}</div><span class="hint">Deslizá las horas y los minutos.</span></div>
         ${ui.medErr ? `<p class="err">${esc(ui.medErr)}</p>` : ""}`;
       acts = `${m._nuevo ? `<button class="btn line" data-act="closeSheet">Cancelar</button>` : `<button class="btn danger" data-act="medQuitar">${ic("trash", "s")} Quitar</button>`}<button class="btn" data-act="medGuardar">Listo</button>`;
       break;

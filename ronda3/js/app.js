@@ -79,6 +79,7 @@ function render() {
   if (focusSel) { const el = $(focusSel); if (el) { el.focus({ preventScroll: true }); if (caret != null) try { el.setSelectionRange(caret, caret); } catch (e) {} } }
   if (sc) sc.scrollTop = scrollY; else window.scrollTo(0, scrollY);
   marcoScroll();
+  initRuedas();
   if (ui.scrollTo) { const el = root.querySelector(`[data-ronda="${ui.scrollTo}"]`); ui.scrollTo = null; if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" })); }
 }
 function marcoScroll() { const a = $("#app"); a.style.setProperty("--st", (scroller() ? a.scrollTop : 0) + "px"); }
@@ -588,6 +589,25 @@ document.addEventListener("change", async (ev) => {
     if (/\uFFFD/.test(txt)) { try { txt = new TextDecoder("windows-1252").decode(await el.files[0].arrayBuffer()); } catch (e) {} }
     ui.imp = { texto: txt }; A.impRevisar(); render();
   }
+});
+/* Rueda de hora: al terminar de deslizar, queda elegida la fila del medio */
+const RD_H = 48;
+function initRuedas() { document.querySelectorAll(".rd-col").forEach((c) => { const on = c.querySelector(".rd-it.on"); if (on) c.scrollTop = [...c.children].indexOf(on) * RD_H; }); }
+function ruedaLeer(c) {
+  const its = [...c.children], i = Math.max(0, Math.min(its.length - 1, Math.round(c.scrollTop / RD_H)));
+  its.forEach((it, k) => { it.classList.toggle("on", k === i); it.setAttribute("aria-selected", k === i); });
+  const r = c.closest(".rueda"), v = (k) => String(r.querySelector(`[data-rd="${k}"] .rd-it.on`)?.dataset.v || 0).padStart(2, "0");
+  if (ui.form?.med) ui.form.med.nuevaHora = `${v("h")}:${v("m")}`;
+}
+let rdTimer;
+document.addEventListener("scroll", (ev) => {
+  const c = ev.target.closest?.(".rd-col"); if (!c) return;
+  clearTimeout(rdTimer); rdTimer = setTimeout(() => ruedaLeer(c), 90);
+}, { capture: true, passive: true });
+document.addEventListener("click", (ev) => { const it = ev.target.closest(".rd-it"); if (!it) return; const c = it.parentNode; c.scrollTo({ top: [...c.children].indexOf(it) * RD_H, behavior: "smooth" }); });
+document.addEventListener("keydown", (ev) => {
+  const c = ev.target.closest?.(".rd-col"); if (!c || !["ArrowUp", "ArrowDown"].includes(ev.key)) return;
+  ev.preventDefault(); c.scrollTop += ev.key === "ArrowDown" ? RD_H : -RD_H; ruedaLeer(c);
 });
 document.addEventListener("keydown", (ev) => {
   lastActivity = Date.now();
