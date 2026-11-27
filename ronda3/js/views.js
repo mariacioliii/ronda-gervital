@@ -63,9 +63,11 @@ function vShell(content) {
     <div class="wrap">
       <main class="page ${ui.tab === "hoy" && !ui.sub ? "" : "narrow"}" id="main">${content}</main>
     </div>
-    <nav class="tabs" aria-label="Secciones">${tabs.map((t) => `${tabBtn(t, "tab")}<span class="ico">${t.id === "mas" ? avatar(S.user, "xs") : ic(t.i)}${t.id === "hoy" && pend ? `<span class="badge ${bump ? "bump" : ""}">${pend}</span>` : ""}</span>${t.t}</button>`).join("")}</nav>
+    <nav class="tabs" aria-label="Secciones">${TABS.map((t) => `${tabBtn(t, "tab")}<span class="ico">${t.id === "mas" ? avatar(S.user, "xs") : ic(t.i)}${t.id === "hoy" && pend ? `<span class="badge ${bump ? "bump" : ""}">${pend}</span>` : ""}</span>${t.t}</button>`).join("")}</nav>
   </div>`;
 }
+/* Perfil arriba a la derecha, como en las apps del celular */
+function vPerfilBtn() { return `<button class="perfil-btn" data-act="tab" data-tab="mas" aria-label="Mi cuenta">${avatar(S.user, "sm")}</button>`; }
 function contarPendientes() {
   const rs = rondasDe(today()); const cur = rondaActual(rs); if (!cur) return 0;
   return rs.filter((r) => mins(r.hora) <= mins(cur.hora)).reduce((n, r) => n + r.items.filter((t) => { const e = estado(t); return e === "pendiente" || e === "atrasada" || e === "pospuesta"; }).length, 0);
@@ -83,7 +85,7 @@ function vHoy() {
   if (!S.personas.some((p) => p.activo !== false)) return vSinPersonas();
   const rondas = rondasDe(iso);
   const min = nowMin();
-  const top = `<header class="hoy-top"><div class="grow"><p class="fecha et">${esc(fechaLarga(iso))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div><div class="reloj js-reloj ${Clock.offsetMin ? "demo" : ""}"><span class="js-hora">${nowHM()}</span></div></header>`;
+  const top = `<header class="hoy-top"><div class="grow"><p class="fecha">${esc(fechaLarga(iso))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div>${vPerfilBtn()}</header>`;
   if (!rondas.length) return `<div class="hoy">${top}<div class="vacio">${ILU.libre()}<h3>Hoy no hay medicación</h3><p>Ninguna de las personas que vienen hoy tiene tomas. Las rondas aparecen solas según los horarios de cada una.</p></div>${vNoVinieron(iso)}</div>`;
   return vHoyAgenda(rondas, min, top + vHero(rondas, min), iso);
 }
@@ -106,7 +108,7 @@ function vHero(rondas, min) {
   const quien = nombres.length > 1 ? nombres.slice(0, -1).join(", ") + " y " + nombres[nombres.length - 1] : nombres[0] || "";
   return `<button class="prox-card ${r === atr ? "tarde" : ""}" data-act="irRonda" data-h="${r.hora}">
     ${r === atr ? "" : vCapsulas()}
-    <span class="prox-k">${r === atr ? "Ronda atrasada" : r === cur ? "Ronda de ahora" : "Próxima ronda"}</span>
+    <span class="prox-k">${r === atr ? "Ronda atrasada" : "Próxima ronda"}</span>
     <b class="prox-t num">${r.hora}</b>
     <span class="prox-n">${esc(quien)}</span>
   </button>`;
@@ -127,13 +129,11 @@ function vHoyAgenda(rondas, min, top, iso) {
     const noT = vis.filter((t) => estado(t) === "nodada").length;
     const est = st === "ok" ? (noT ? `${noT === 1 ? "1 no la tomó" : noT + " no las tomaron"}` : `${ic("check", "s")} Todo registrado`) : st === "bad" ? "Atrasada" : st === "now" ? "Es ahora" : `En ${durTxt(mins(r.hora) - min)}`;
     const resto = st === "ok" ? plural(hechas, "toma") : abiertas.length === vis.length ? `${plural(vis.length, "toma pendiente", "tomas pendientes")}` : `${hechas} de ${vis.length} · ${abiertas.length === 1 ? "falta 1" : `faltan ${abiertas.length}`}`;
-    const pct = vis.length ? Math.round((hechas / vis.length) * 100) : 100;
     return `<section class="ag ${st} ${st === "ok" && noT ? "conno" : ""} ${abierta ? "open" : ""}" style="--i:${ri}" data-ronda="${r.hora}">
       <button class="ag-h" data-act="verRonda" data-h="${r.hora}" data-def="${def ? 1 : ""}" aria-expanded="${abierta}">
         <b class="ag-hora num">${r.hora}</b>
-        <span class="ag-est"><span class="ag-tx">${est}</span><span class="ag-n num">${resto}</span><span class="ag-seg" role="img" aria-label="${hechas} de ${vis.length} registradas">${vis.map((t) => `<i class="${estado(t) === "dada" ? "si" : estado(t) === "nodada" ? "no" : ""}"></i>`).join("")}</span></span>
+        <span class="ag-est"><span class="ag-tx">${est}</span><span class="ag-n num">${resto}</span></span>
         <span class="ag-chev">${ic("chevD", "s")}</span>
-        <span class="ag-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>
       </button>
       ${abierta ? `<div class="pcs">${agrupar(vis).map((g, i) => vPaciente(g, st, i)).join("")}</div>` : ""}
     </section>`;
@@ -200,7 +200,7 @@ function vNoVinieron(iso) {
 
 function vSinPersonas() {
   const cuid = S.staff.filter((u) => u.id !== S.user.id && u.activo !== false).length;
-  return `<div class="hoy"><header class="hoy-top"><div class="grow"><p class="fecha">${esc(fechaLarga(today()))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div></header>
+  return `<div class="hoy"><header class="hoy-top"><div class="grow"><p class="fecha">${esc(fechaLarga(today()))}</p><h1>Hola, ${esc(primerNombre(S.user.nombre))}</h1></div>${vPerfilBtn()}</header>
     ${esAdmin() ? `<h2 class="h2" style="margin:8px 0 14px">Empecemos</h2>
     <div class="pasos">
       <button class="paso" data-act="nuevaPersona"><span class="n">1</span><span class="grow"><b>Agregar personas</b><small>Y su medicación con horario</small></span>${ic("chevR", "s")}</button>
@@ -330,6 +330,7 @@ function vMas() {
   const li = (act, icon, t, d, extra = "", cls = "") => `<button class="li" data-act="${act}" ${extra}><span class="ic ${cls}">${ic(icon)}</span><span class="grow"><span class="t">${t}</span>${d ? `<span class="d" style="display:block">${d}</span>` : ""}</span>${ic("chevR", "s chev")}</button>`;
   const nativa = !!window.RONDA_NATIVA;
   return `
+    <div class="subhead"><button class="iconbtn" data-act="tab" data-tab="hoy" aria-label="Volver a Hoy">${ic("chevL")}</button><h1 class="h2">Mi cuenta</h1></div>
     <div class="perfil">${avatar(u, "xl")}<h1>${esc(u.nombre)}</h1><p>@${esc(u.usuario || "")} · ${u.admin ? "Administra" : "Equipo"}</p></div>
     ${u.admin ? `<div class="grupo"><div class="list">
       ${li("sub", "equipo", "Usuarios del equipo", plural(S.staff.filter((x) => x.activo !== false).length, "usuario"), 'data-sub="equipo"')}
